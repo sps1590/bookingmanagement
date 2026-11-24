@@ -130,7 +130,9 @@ BEGIN
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
       AND c.relkind = 'r'
-      AND c.relname NOT IN ('subscription_plans', 'platform_admins',
+      -- `businesses` is the tenant root: its own id *is* the tenant key. The
+      -- others are platform-owned and belong to no tenant.
+      AND c.relname NOT IN ('businesses', 'subscription_plans', 'platform_admins',
                             'platform_heartbeat', 'booking_code_counters')
       AND NOT EXISTS (
           SELECT 1 FROM pg_attribute a

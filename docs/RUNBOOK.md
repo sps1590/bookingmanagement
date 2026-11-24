@@ -4,27 +4,33 @@ Operational procedures. Phase 0 establishes the file; each phase fills in the se
 
 ## Local development
 
+There is no local database and no Docker (see [DECISIONS.md](DECISIONS.md) D-014). Development runs against a hosted Supabase project, and the schema is managed from the command line.
+
 | Task | Command |
 |---|---|
-| Start database | `npm run db:start` (needs Docker Desktop) |
-| Stop database | `npm run db:stop` |
-| Rebuild schema from zero | `npm run db:reset` |
-| Studio UI | http://127.0.0.1:54323 |
-| Inbucket (captured email) | http://127.0.0.1:54324 |
+| Run the app | `npm run dev` |
+| Apply migrations | `npm run db:push` |
+| Preview what would be applied | `npm run db:push -- --dry` |
+| Regenerate types | `npm run db:types` |
+| RLS suite against the current schema | `npm run test:db` |
+| Build the schema from zero and test it | `npm run test:db -- --fresh` |
+| Everything CI's static and unit stages run | `npm run verify` |
 
-If `db:start` fails, confirm Docker is running and ports 54321–54324 are free.
+All of these read `SUPABASE_DB_URL` from `.env.local`. That is the **direct** Postgres connection string from Project Settings → Database, not the API URL, and the application itself never uses it.
+
+`--fresh` is destructive and additive: point it at a throwaway database, never at production. Without `--fresh`, every test runs inside a transaction that is rolled back, so it is safe against staging.
 
 ## Environments
 
 | | Supabase project | Frontend |
 |---|---|---|
-| dev | local via CLI (Docker) | `npm run dev` |
-| staging | *(Phase 1 — create and record the ref here)* | Netlify deploy preview |
-| prod | *(Phase 1 — create and record the ref here)* | Netlify production |
+| dev | the staging project (shared) | `npm run dev` |
+| staging | *(record the project ref here)* | Vercel preview deployment |
+| prod | *(record the project ref here)* | Vercel production |
 
-Only **two** hosted Supabase projects, because that is what the free tier allows; dev is local only. See [FREE_STACK.md](FREE_STACK.md).
+Only **two** hosted Supabase projects, because that is what the free tier allows. Development therefore shares the staging project rather than having one of its own — which means a careless `npm run db:push` during development changes staging's schema. Push deliberately.
 
-Deploying schema: `npx supabase link --project-ref <ref>` then `npm run db:push`. Always push to staging and run the E2E suite against it before production.
+Deploying schema: set `SUPABASE_DB_URL` to the target project and run `npm run db:push`. Always push to staging and run the E2E suite against it before production.
 
 ## Free-tier watch items
 
@@ -35,8 +41,10 @@ These are the failure modes that come from running at zero cost rather than from
 | Every request to prod errors, nothing deployed recently | Supabase project **paused** after 7 days idle | Resume it in the dashboard; confirm the keep-alive workflow is still scheduled and green |
 | Reminders stopped platform-wide, queue is backing up | Monthly email allowance spent (3,000 across **all** tenants) | Check the send counter; switch `NOTIFY_EMAIL_PROVIDER` to Brevo; reminders fall back to push and the calendar invite |
 | Writes failing, queue rows not inserting | 500 MB database ceiling | Run the `notification_logs` retention job; check for an un-pruned table |
-| Deploys refused mid-month | 300 Netlify build minutes spent | Batch commits; wait for the reset |
-| CI stops running on a private repo | 2,000 Actions minutes spent | Make the repo public (unlimited), or gate the Docker-heavy database job to migration changes only |
+| Deploys refused mid-month | Vercel Hobby build or bandwidth limit | Batch commits; wait for the reset |
+| A legal notice from Vercel, or an account flagged | Hobby is **non-commercial only** and the platform is charging tenants | Upgrade to Pro ($20/mo). This is a licence term, not a cap, so nothing warns you first — see [DECISIONS.md](DECISIONS.md) D-013 |
+| CI stops running on a private repo | 2,000 Actions minutes spent | Make the repo public (unlimited), or gate the database job to migration changes only |
+| Reminders never fire, queue fills | Vercel Hobby cron is daily-only and functions time out at 10s | The scheduler is `pg_cron` inside Supabase for exactly this reason (D-013); check `cron.job_run_details` rather than Vercel |
 
 ## Incident procedures
 

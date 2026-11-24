@@ -37,6 +37,8 @@ export const ErrorCode = {
   INVALID_STATUS_TRANSITION: "INVALID_STATUS_TRANSITION",
   /** A deposit transaction ID was already used by this tenant. Phase 8. */
   DUPLICATE_TRANSACTION_ID: "DUPLICATE_TRANSACTION_ID",
+  /** Signup: this email, or this account's one business, already exists. */
+  ALREADY_REGISTERED: "ALREADY_REGISTERED",
   PAYMENT_FAILED: "PAYMENT_FAILED",
 } as const;
 
@@ -59,6 +61,7 @@ const STATUS: Record<ErrorCode, number> = {
   NOTIFY_QUOTA_EXHAUSTED: 503,
   INVALID_STATUS_TRANSITION: 422,
   DUPLICATE_TRANSACTION_ID: 409,
+  ALREADY_REGISTERED: 409,
   PAYMENT_FAILED: 402,
 };
 

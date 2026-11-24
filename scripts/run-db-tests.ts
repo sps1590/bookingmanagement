@@ -30,6 +30,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { Client, type ClientConfig } from "pg";
+import { redactDbUrl, resolveDbUrl } from "./lib/db-url";
 
 const FRESH = process.argv.includes("--fresh");
 const ROOT = process.cwd();
@@ -40,21 +41,16 @@ const SHIM = path.join(ROOT, "scripts", "sql", "supabase-shim.sql");
 // glob below does not pick it up and run it as a test of its own.
 const FIXTURE = path.join(TEST_DIR, "_shared", "fixture.sql");
 
-const DB_URL = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
-
-if (!DB_URL) {
-  console.error(
-    "SUPABASE_DB_URL is not set.\n\n" +
-      "  Hosted project: Supabase dashboard > Project Settings > Database >\n" +
-      "                  Connection string > URI, then put it in .env.local\n" +
-      "  Local Postgres: postgresql://postgres:postgres@127.0.0.1:5432/postgres\n\n" +
-      "See docs/DEVELOPER_GUIDE.md.",
-  );
+let DB_URL: string;
+try {
+  DB_URL = resolveDbUrl();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
 
 function clientConfig(): ClientConfig {
-  const isLocal = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(DB_URL!);
+  const isLocal = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(DB_URL);
   if (isLocal) return { connectionString: DB_URL };
 
   // Supabase issues the direct database endpoint a certificate that is not in
@@ -190,8 +186,7 @@ async function runTests(): Promise<number> {
 }
 
 async function main(): Promise<void> {
-  const target = DB_URL!.replace(/:[^:@/]*@/, ":****@");
-  console.log(`Target: ${target}${FRESH ? "  (building schema from zero)" : ""}\n`);
+  console.log(`Target: ${redactDbUrl(DB_URL)}${FRESH ? "  (building schema from zero)" : ""}\n`);
 
   if (FRESH) await buildSchema();
 

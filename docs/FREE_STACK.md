@@ -13,8 +13,8 @@ Last audited: 2026-11-24.
 | Need | Service | Free tier | Hard limit | When you hit it |
 |---|---|---|---|---|
 | Database, Auth, RLS, Edge Functions, Realtime | **Supabase** | Free | 500 MB DB · **2 projects** · 50k MAU · 5 GB egress/mo · no automated backups · pauses after 7 days idle | §4 keep-alive; §5 backups; prune `notification_logs` |
-| Frontend + API hosting | **Netlify** | Free (Starter) | 100 GB bandwidth/mo · 300 build min/mo · commercial use permitted | ~100 deploys/mo is the real cap; batch commits |
-| CI | **GitHub Actions** | Free | Unlimited on **public** repos · 2,000 min/mo private | Make the repo public, or gate the Docker-heavy DB job |
+| Frontend + API hosting | **Vercel** | Free (Hobby) | 100 GB bandwidth/mo · 10s function timeout · 2 daily cron jobs · **non-commercial use only** | ⚠️ The licence, not a cap. Charging tenants requires Pro at $20/mo — see below and D-013 |
+| CI | **GitHub Actions** | Free | Unlimited on **public** repos · 2,000 min/mo private | Make the repo public, or gate the database job to migration changes |
 | Email delivery | **Resend** | Free | 3,000/mo · 100/day · 1 domain | Switch to Brevo (300/day) or add a second sender |
 | Push notifications | **Web Push (VAPID)** | Free forever | None — it is a browser standard, not a service | n/a |
 | Staff/owner alerts | **Telegram Bot API** | Free | Unlimited, ~30 msg/sec | n/a |
@@ -22,10 +22,18 @@ Last audited: 2026-11-24.
 | Error tracking | **Sentry** | Free (Developer) | 5k errors/mo · 1 project · 30-day retention | Already inert without a DSN; drop to logs only |
 | Uptime checks | **GitHub Actions cron** | Free | — | n/a |
 | Load testing | **k6 OSS** | Free | Run locally, no cloud account | n/a |
-| Local database | **Docker Engine via WSL2** | Free | — | n/a |
-| Domain | Host subdomain (`*.netlify.app`) | Free | Cosmetic only | Buy a domain later (~$10/yr) if you want |
+| Local database | **none** — hosted Supabase for dev, `postgres:17` service container in CI | Free | — | See D-014 |
+| Domain | Host subdomain (`*.vercel.app`) | Free | Cosmetic only | Buy a domain later (~$10/yr) if you want |
 
 Nothing above requires a card on file.
+
+### The one thing that is not actually free
+
+**Vercel Hobby is licensed for non-commercial use only.** It is free to use and will stay free; what it will not do is permit a SaaS that charges its tenants. That is a term of service rather than a usage meter, so there is no warning email and no throttle — the account is simply in breach, and the remedy is Pro at $20/month.
+
+So the honest statement of this project's cost is: **zero until the first paying tenant, then $20/month.** Everything else in the table above stays free at that scale.
+
+Vercel was chosen anyway, by the project owner, with that known (D-013 supersedes D-008). Netlify's free tier permits commercial use and remains the alternative if the $20 ever matters more than the preference; nothing in the repository is host-specific, and the security headers live in `next.config.ts` precisely so a move is a DNS change rather than a refactor.
 
 ---
 
@@ -33,7 +41,8 @@ Nothing above requires a card on file.
 
 | Assumed | Problem | Replaced with |
 |---|---|---|
-| **Vercel** (spec §1.5) | Hobby tier is **non-commercial only**. A SaaS charging tenants breaches those terms; Pro is ~$20/mo. | Netlify free — official Next.js support, commercial use permitted |
+| ~~**Vercel** (spec §1.5)~~ | Hobby tier is **non-commercial only**. A SaaS charging tenants breaches those terms; Pro is ~$20/mo. | **Reversed on 2026-11-25:** the owner chose Vercel regardless (D-013). The analysis stands; the cost is accepted, not avoided |
+| **Docker Desktop for local Postgres** | The owner does not want Docker in the workflow. | Hosted Supabase for development; `postgres:17` plus a shim for tests (D-014) |
 | **SSL Wireless / BulkSMSBD / MimSMS** | No free tier exists for SMS in Bangladesh. Billed per message. | Dropped. See §3 |
 | **Meta WhatsApp Cloud API** | Only *user-initiated* service conversations are free. A reminder is business-initiated → utility template → billed per message. | Dropped from the default build. Adapter interface kept |
 | **Stripe** | Cannot receive payouts in Bangladesh. | Dropped |

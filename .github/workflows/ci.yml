@@ -11,9 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Local Supabase defaults. Real secrets never enter CI for these stages;
-  # the database stages run against a throwaway instance.
-  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  # Placeholders. No stage below talks to a real Supabase project: the database
+  # job uses a throwaway Postgres service container, and the routes the E2E
+  # suite visits do not call Supabase. Shaped like real values because
+  # lib/env.ts validates them at boot and a malformed URL fails the build.
+  NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+  SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
   NEXT_PUBLIC_APP_URL: http://localhost:3100
   LOG_LEVEL: error
 
@@ -48,13 +52,33 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test -- --reporter=default
-      - name: Upload coverage
-        if: always()
-        run: npm run test:coverage -- --reporter=default || true
 
   database:
     name: Migrations & RLS tests
     runs-on: ubuntu-latest
+
+    # A plain Postgres, not the Supabase stack. scripts/sql/supabase-shim.sql
+    # supplies the four things the schema needs from Supabase — auth.users,
+    # auth.uid(), the three roles, and Supabase's open default grants — so the
+    # whole schema and every policy can be built and tested here. No Docker on
+    # anyone's laptop, and no shared hosted project for CI to fight over.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -63,33 +87,20 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Start Supabase
-        run: npx supabase start --exclude studio,imgproxy,realtime,storage-api,edge-runtime
-
-      # Proves the migration chain applies from zero every time. This is why
-      # schema lives in supabase/migrations and not in the hosted SQL Editor:
-      # a schema you cannot rebuild is a schema you cannot test.
-      - name: Rebuild schema from scratch
-        run: npx supabase db reset --no-seed
-
-      - name: Apply seed
-        run: npx supabase db reset
-
-      - name: Database tests (RLS, double-booking)
-        run: npm run test:db
+      # Builds the schema from nothing and then asserts against it. This is
+      # what proves the migration chain still applies in order from an empty
+      # database — the guarantee `supabase db reset` used to provide.
+      - name: Build schema from zero and run RLS suite
+        run: npm run test:db:fresh
 
       - name: Check generated types are current
         run: |
-          npx supabase gen types typescript --local > /tmp/types.ts
+          npx tsx scripts/gen-types.ts /tmp/types.ts
           if ! diff -q /tmp/types.ts lib/supabase/types.ts; then
-            echo "::error::lib/supabase/types.ts is stale. Run 'npm run db:types' and commit."
+            echo "::error::lib/supabase/types.ts is stale. Run 'npm run db:types' and commit the result."
             diff /tmp/types.ts lib/supabase/types.ts || true
             exit 1
           fi
-
-      - name: Stop Supabase
-        if: always()
-        run: npx supabase stop --no-backup
 
   e2e:
     name: End-to-end
@@ -106,14 +117,6 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Start Supabase
-        run: npx supabase start --exclude studio,imgproxy
-
-      - name: Resolve Supabase keys
-        run: |
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(npx supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_ENV"
-
       - name: Build
         run: npm run build
 
@@ -126,7 +129,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
-
-      - name: Stop Supabase
-        if: always()
-        run: npx supabase stop --no-backup

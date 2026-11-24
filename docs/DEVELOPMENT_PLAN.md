@@ -37,7 +37,7 @@ The platform runs entirely on free tiers. [FREE_STACK.md](FREE_STACK.md) holds t
 
 | Spec said | Reality | This plan does |
 |---|---|---|
-| Vercel hosting | Hobby tier is non-commercial only | Netlify free (commercial permitted, official Next support) |
+| Vercel hosting | Hobby tier is non-commercial only — a licence term, not a cap | **Vercel kept** by the owner's decision (D-013). Cost is zero until the first paying tenant, then $20/mo for Pro |
 | SMS reminders | No free tier in Bangladesh, billed per message | **Dropped.** Email + web push + Telegram + `.ics` |
 | WhatsApp reminders | Only user-initiated conversations are free; a reminder is a billed utility template | **Dropped** from the default build; adapter seam kept |
 | Stripe / bKash / SSLCommerz | Stripe cannot pay out in BD; merchant accounts need registration and fees | Manual TrxID verification (Phase 8) |
@@ -55,10 +55,10 @@ Two obligations this creates early, which must not slide to a cleanup phase:
 
 ## 1. Phase summary
 
-| # | Phase | Length | Ships |
-|---|---|---|---|
-| 0 | Foundations & environment | 3 days | Deployed empty app, CI green, Supabase linked |
-| 1 | Database core & multi-tenancy | 1 week | Migrations, RLS, tenant signup, onboarding wizard |
+| # | Phase | Length | Ships | Status |
+|---|---|---|---|---|
+| 0 | Foundations & environment | 3 days | Deployed empty app, CI green, Supabase linked | **done**, bar the Vercel/Supabase accounts |
+| 1 | Database core & multi-tenancy | 1 week | Migrations, RLS, tenant signup, onboarding wizard | **done** |
 | 2 | Scheduling engine | 1 week | Hardened slot RPCs, zero double-booking under load |
 | 3 | Public booking portal | 1 week | A stranger can book online end-to-end |
 | 4 | Admin dashboard & booking ops | 1 week | Reception desk runs a real day on it — **MVP** |
@@ -83,7 +83,7 @@ Two obligations this creates early, which must not slide to a cleanup phase:
 - Decide migration discipline now: **all schema lives in `supabase/migrations/*.sql`**, never hand-typed in the SQL Editor. (The spec says "paste into the SQL Editor" — don't. You will need repeatable deploys and a rollback story.)
 - Typed DB client: `supabase gen types typescript` wired to an `npm run db:types` script.
 - Testing harness: Vitest (unit), Playwright (E2E), pgTAP or plain SQL assertion scripts (database).
-- GitHub Actions: lint → typecheck → unit → `supabase db reset` on an ephemeral Postgres → pgTAP → Playwright → deploy preview to Netlify. Keep the repo **public** if you can: Actions minutes are unlimited on public repos and capped at 2,000/month on private ones, and the Docker-heavy database job is what eats them.
+- GitHub Actions: lint → typecheck → unit → schema built from zero on a `postgres:17` service container → RLS suite → Playwright. No Docker on the developer's machine (D-014). Keep the repo **public** if you can: Actions minutes are unlimited on public repos and capped at 2,000/month on private ones, and the database job is what eats them.
 - Error tracking (Sentry) and structured server logging from day one.
 - Seed script (`supabase/seed.sql`) creating 2 tenants, 3 staff, 5 services, 1 week of availability. Every later phase tests against this.
 
@@ -137,8 +137,8 @@ No SMS, WhatsApp or payment-gateway variables: §1.5 removed all of them. Genera
 - [x] CI defined with all five stages (`.github/workflows/ci.yml`).
 - [x] Unit harness green (Vitest, 9 tests) and E2E green (Playwright, 4 tests across desktop + mobile).
 - [x] Generated DB types placeholder imports cleanly; `npm run db:types` wired.
-- [ ] **Blocked — needs Docker Desktop:** `supabase db reset` runs the migration chain + seed from scratch. Cannot be verified on this machine; `docker` is not installed. Install Docker Desktop before starting Phase 1, then run `npm run db:start && npm run db:reset`. The CI `database` job covers this on GitHub runners.
-- [ ] **Needs accounts:** `main` deploys automatically to a Netlify URL. Requires connecting the repo to Netlify and creating the two hosted Supabase projects (staging, prod).
+- [x] The migration chain applies from an empty database. `supabase db reset` was replaced by `npm run test:db -- --fresh`, which needs no Docker (D-014); verified against PostgreSQL 17.
+- [ ] **Needs accounts:** `main` deploys automatically to a Vercel URL. Requires connecting the repo to Vercel and creating the two hosted Supabase projects (staging, prod).
 
 Decisions taken during Phase 0 — including the move to Next 16 — are recorded in [DECISIONS.md](DECISIONS.md).
 
@@ -154,7 +154,7 @@ Port spec SQL Block 1 into numbered migrations, **with the corrections below app
 
 | Migration | Contents |
 |---|---|
-| `0001_extensions` | `uuid-ossp`, `btree_gist`, `pgcrypto`, `citext` |
+| `0001_extensions` | `btree_gist`, `pgcrypto`. `uuid-ossp` and `citext` deliberately unused — D-011 |
 | `0002_plans` | `subscription_plans` + seed free/pro/enterprise |
 | `0003_tenancy` | `businesses`, `business_members`, `branches`, `platform_admins` *(new — B-22)* |
 | `0004_catalog` | `services`, `staff_resources`, `staff_services` |
@@ -163,25 +163,43 @@ Port spec SQL Block 1 into numbered migrations, **with the corrections below app
 | `0007_bookings` | `bookings` + `booking_history` + GIST exclusion |
 | `0008_waitlist` | `waitlist_entries` |
 | `0009_notifications` | `notification_templates`, `notification_logs` |
-| `0010_payments` | `payments`, `subscription_invoices`, `sms_topups` *(new — B-24)* |
+| `0010_payments` | `payments`, `subscription_invoices` *(new — B-24)*. No `sms_topups`: with no SMS channel there is nothing to top up (D-009) |
 | `0011_indexes` | all performance indexes |
-| `0012_triggers` | `updated_at` triggers *(M-06)*, booking-code sequence *(B-15)* |
+| `0012_triggers` | `updated_at` triggers *(M-06)*, booking-code counter *(B-15)*, last-owner guard, frozen payment claims *(D-010)* |
+| `0013_rls_helpers` | the six functions every policy is written in terms of |
+| `0014_public_views` | `public_businesses` / `_branches` / `_services` / `_staff` — the B-05 fix |
+| `0015_rls_policies` | grants and policies, in one reviewable file |
+| `0016_platform_ops` | `platform_heartbeat`, for the keep-alive job |
+| `0017_register_business` | transactional tenant signup — §3.3 |
 
 Required changes to the spec's DDL:
 
 - **B-03 — buffers are not enforced by the database.** The spec computes free slots using `buffer_before/after_minutes`, but stores `slot_range = tstzrange(start_time, end_time)` and puts the GIST exclusion on *that*. Two concurrent requests can therefore land back-to-back and silently violate the sterilisation/cleanup gap. Fix: persist the buffers on the booking row and exclude on the blocked range.
 
 ```sql
+-- shift_minutes is required: `timestamptz - interval` is STABLE, not
+-- IMMUTABLE, so the obvious inline expression is rejected with
+-- "generation expression is not immutable". See docs/DECISIONS.md D-017.
+CREATE FUNCTION shift_minutes(ts TIMESTAMPTZ, mins INT)
+RETURNS TIMESTAMPTZ LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+SET search_path = public, extensions, pg_temp
+AS $$ SELECT ts + make_interval(mins => mins) $$;
+
 buffer_before_minutes INT NOT NULL DEFAULT 0,
 buffer_after_minutes  INT NOT NULL DEFAULT 0,
 blocked_range TSTZRANGE GENERATED ALWAYS AS (
-  tstzrange(start_time - make_interval(mins => buffer_before_minutes),
-            end_time   + make_interval(mins => buffer_after_minutes), '[)')
+  tstzrange(shift_minutes(start_time, -buffer_before_minutes),
+            shift_minutes(end_time,    buffer_after_minutes), '[)')
 ) STORED,
 CONSTRAINT prevent_double_booking EXCLUDE USING GIST (
   business_id WITH =, staff_id WITH =, blocked_range WITH &&
 ) WHERE (status IN ('pending','confirmed','checked_in'))
 ```
+
+> **Correction, 2026-11-25.** An earlier revision of this plan inlined
+> `start_time - make_interval(...)` directly in the generated column. That does not
+> compile on any PostgreSQL version — verified against 17. The immutable wrapper above
+> is what shipped in `0007_bookings.sql`.
 
 - **B-15 — booking-code collisions.** `'BK-' || YYMMDD || 4 hex` against `UNIQUE (business_id, booking_code)` will collide (birthday collision around 300 bookings/day) and the RPC has no retry, so the customer sees a 500. Use a per-business daily sequence, or loop up to 5 times on `unique_violation`.
 - **B-16 — notification worker double-send.** Add `attempts INT NOT NULL DEFAULT 0`, `locked_at TIMESTAMPTZ`, `last_error TEXT` to `notification_logs`; the worker claims rows with `FOR UPDATE SKIP LOCKED` (Phase 5).
@@ -229,10 +247,14 @@ Write these in `tests/db/` and run them in CI:
 
 ### Exit criteria
 
-- [ ] `supabase db reset` builds all tables, policies and seeds cleanly from scratch.
-- [ ] Every RLS test above passes, and CI fails if any regresses.
-- [ ] A real signup through the UI produces a `BIZ-1042`-style code, a unique slug, a default branch, industry labels and seeded templates.
-- [ ] The onboarding wizard completes and the public URL resolves (even if the page is still bare).
+- [x] The migration chain builds every table, policy, view and seed from an empty database. 17 migrations, 20 tables, 38 policies, 4 curated views, verified against PostgreSQL 17 via `npm run test:db -- --fresh`.
+- [x] Every RLS test passes, and CI fails if any regresses — 10 suites in `tests/db/`, run by the `database` job on a `postgres:17` service container. Each was validated by breaking the thing it guards: reintroducing the spec's `slot_range` constraint makes the B-03 suites fail with the real-world consequence named.
+- [x] Signup produces a `BIZ-####` code from a sequence, a collision-safe slug, an owner membership, a default branch, industry terminology and seeded notification templates — all in one transaction (`register_business`, migration 0017), asserted in `tests/db/0010_register_business.sql`.
+- [x] The five-step wizard is resumable from `businesses.onboarding_step`, and publishing gates public visibility: `public_businesses` filters on `onboarding_completed_at`, so a half-configured clinic is unreachable. `/book/[slug]` resolves and renders the tenant's own services, providers and labels.
+- [x] Free-tier survival jobs exist: `keepalive.yml` (every 3 days, writes to `platform_heartbeat`) and `backup.yml` (daily encrypted `pg_dump`). **Both need repository secrets set before they do anything** — see §3.4 and the warning at the top of `backup.yml`.
+- [ ] **Needs a hosted project:** `npm run db:push` against staging and production. Verified against PostgreSQL 17 but not yet against Supabase itself.
+
+Beyond the plan, Phase 1 also added composite foreign keys for tenant integrity (D-015), a last-active-owner guard, frozen payment claims (D-010), and closed default privileges for future tables (D-016). Phase 1 decisions are D-011 to D-017.
 
 ---
 
@@ -528,7 +550,7 @@ A manual flow needs guards that an automated gateway would have given you free:
 - **M-09 — waitlist automation.** `waitlist_entries` exists with a `notified` status but no logic anywhere. Build: join from the full-day state in Phase 3; on cancellation, find matching `waiting` entries for that date and service, notify FIFO with a short-lived claim link, mark `notified`, expire after N hours, then move to the next. Guard against notifying 50 people for one slot.
 - **Analytics** (`GET /api/v1/admin/analytics/summary`): total bookings, completion rate, no-show percentage, peak-hours heatmap, staff utilisation, repeat-customer rate, estimated vs collected revenue, per-branch comparison. Move to materialised views refreshed hourly if the queries get heavy.
 - **Multi-branch**: branch-scoped dashboards, cross-branch roll-up for owners, per-branch working hours.
-- **Custom domain** (Enterprise): a domains table, verification, the Netlify domain API, and middleware resolving host → tenant. The *tenant* buys their own domain, so this costs the platform nothing; the platform's own URL stays a free `*.netlify.app` subdomain until a domain is worth ~$10/yr to you.
+- **Custom domain** (Enterprise): a domains table, verification, the Vercel domains API, and middleware resolving host → tenant. The *tenant* buys their own domain, so this costs the platform nothing; the platform's own URL stays a free `*.vercel.app` subdomain until a domain is worth ~$10/yr to you.
 - **Super Admin console** (`/superadmin`, gated by `platform_admins`): tenant directory with booking counts and plans, plan and tier editor, SMS gateway usage, MRR, suspend/activate, and impersonation with an audit trail for support.
 
 ### Exit criteria
@@ -546,7 +568,7 @@ A manual flow needs guards that an automated gateway would have given you free:
 - **Security review**: re-run the RLS matrix; verify the service-role key never reaches a client bundle; rate-limit every public endpoint; token brute-force check; OWASP pass on the public portal; confirm the B-05 and B-09 fixes are still in place.
 - **Data**: verify the Phase 1 `pg_dump` job is still running and still restorable (PITR is a paid feature, so this job *is* the backup strategy), plus a written retention and deletion policy for customer PII (medical-adjacent data raises the stakes).
 - **Observability**: Sentry free tier (5k errors/month, already inert without a DSN), a GitHub Actions cron uptime check, and alerts on queue depth, failed-notification rate, worker lag and deposit-verification backlog.
-- **Free-tier headroom review**: current DB size against 500 MB, monthly egress against 5 GB, email sends against 3,000/month, Netlify bandwidth against 100 GB. Record the numbers so the first tenant growth spurt is a planned conversation and not an outage.
+- **Free-tier headroom review**: current DB size against 500 MB, monthly egress against 5 GB, email sends against 3,000/month, Vercel bandwidth against 100 GB. Record the numbers so the first tenant growth spurt is a planned conversation and not an outage.
 - **Docs**: `API.md`, `SCHEMA.md`, `RUNBOOK.md` (gateway outage, stuck queue, restore), a tenant onboarding guide, and a support playbook.
 - **UAT**: three pilot businesses across three industries for one full week.
 - **Launch**: staged rollout, pricing page, Terms and Privacy, support channel.

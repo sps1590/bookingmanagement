@@ -94,7 +94,9 @@ This is a hard constraint, not a preference, so it outranks the source spec's re
 ## D-008 — Netlify, not Vercel
 
 **Date:** 2026-11-24
-**Status:** Accepted
+**Status:** ~~Accepted~~ **Superseded by D-013** — the project owner chose Vercel on
+2026-11-24. The licensing analysis below still stands and is the reason D-013 carries a
+cost warning; it was overruled on preference, not on facts.
 
 The spec recommends Vercel. Vercel's free Hobby tier is **non-commercial use only** — a licence restriction, not a usage limit — and this platform is intended to charge tenants. Staying on Hobby would mean either breaching the terms or migrating a production Next.js app under revenue pressure, which is the worst possible moment to do it.
 
@@ -135,3 +137,127 @@ Plan *enforcement* — staff caps, booking caps, feature flags — is still real
 A manual flow loses guards an automated gateway gives for free, so Phase 8 must add them explicitly: a TrxID unique per tenant enforced by a constraint, verification audited to a named user, and expected-versus-claimed amounts shown side by side at the desk. Marking a booking paid is the one action in this product where a dishonest employee can steal money.
 
 The `PaymentGateway` interface stays, so a real merchant account plugs in behind the same seam later.
+
+---
+
+## D-011 — `uuid-ossp` and `citext` are installed but unused
+
+**Date:** 2026-11-25 (Phase 1)
+**Status:** Accepted
+
+The spec's extension list is `uuid-ossp`, `btree_gist`, `pgcrypto`. Supabase preinstalls the first and `citext` besides, so this is a choice not to *call* them rather than not to install them.
+
+`gen_random_uuid()` has been in core Postgres since 13 and the project targets 17. Reaching into `uuid-ossp` for `uuid_generate_v4()` would mean every primary key default depends on an extension whose schema we do not control: Supabase keeps it in `extensions`, a plain Postgres puts it in `public`, and a column default that resolves at DDL time would then behave differently depending on who ran the migration.
+
+`citext` was considered for `businesses.slug`, where case-insensitive uniqueness genuinely matters — `/book/Dhaka-Dental` and `/book/dhaka-dental` must not be two tenants. A CHECK constraining the slug to lowercase achieves the same thing with no type dependency, and makes the rule visible in the DDL. Email lookups use an expression index on `lower(email)` instead.
+
+`btree_gist` is not optional: without it the `prevent_double_booking` exclusion constraint cannot be created at all, because plain GiST has no equality operator class for `uuid`.
+
+---
+
+## D-012 — The Super Admin role reads configuration, not patient data
+
+**Date:** 2026-11-25 (Phase 1)
+**Status:** Accepted — a deliberate narrowing of what defect B-22 prescribes
+
+The defects register says Super Admin should be implemented by giving every RLS policy `OR is_platform_admin()`. That is not what shipped. The clause appears only on SELECT policies, and only for configuration tables: businesses, memberships, branches, services, staff, availability, plans, payments and invoices. It is absent from `customers`, `bookings`, `booking_history`, `waitlist_entries` and `notification_logs`.
+
+The argument for the full version is that the platform operator holds the service-role key anyway, so restricting the JWT path is theatre. The argument against — which won — is that a leaked or hijacked operator *session* is a different threat from a leaked service key, and there is no reason for a support engineer checking which plan a tenant is on to carry an ambient, unlogged read of every clinic's patient list and clinical notes while they do it.
+
+Support that genuinely needs patient data still has it, through the service-role console, where the access is an explicit act in code rather than a property of being signed in.
+
+It is also read-only. `is_platform_admin()` never appears in a write policy, so a platform admin cannot rename a tenant or edit its catalogue through RLS. `tests/db/0006_platform_admin_scope.sql` asserts both halves, because the risk with a documented limit is that someone later "fixes" it by adding the clause everywhere.
+
+---
+
+## D-013 — Vercel, not Netlify
+
+**Date:** 2026-11-25
+**Status:** Accepted — the project owner's choice, superseding D-008
+
+The owner wants to deploy on Vercel. That is their call, and the build now targets it: security headers moved into `next.config.ts` so they apply on any host, and nothing in the repository is host-specific.
+
+**The cost consequence has to be stated plainly, because it contradicts D-007.** Vercel's free Hobby tier is licensed for **non-commercial use only**. That is a licence restriction rather than a usage cap, so it does not arrive as a warning or a throttle — the moment this platform charges a tenant, Hobby requires upgrading to Pro at $20/month. The zero-cost constraint therefore holds right up to the first paying customer, and not past it.
+
+Two further Hobby limits matter for later phases, and are cheaper to know now than to discover in Phase 5:
+
+- **Function duration is capped at 10 seconds.** The notification worker must stay under that or move into a Supabase Edge Function.
+- **Vercel Cron on Hobby allows two jobs at daily granularity.** That cannot drive a one-hour-before reminder, so the reminder scheduler will be `pg_cron` inside Supabase rather than Vercel Cron.
+
+Neither is a blocker. Both change what Phase 5 builds.
+
+---
+
+## D-014 — No Docker: hosted Supabase for development, plain Postgres for tests
+
+**Date:** 2026-11-25
+**Status:** Accepted — the project owner's constraint
+
+The owner does not want Docker in the workflow. The Supabase CLI's local stack needs it, and so do `supabase db reset`, `supabase db diff` and `supabase gen types --local`. Those are gone.
+
+What replaced them:
+
+| Was | Needed Docker | Now |
+|---|---|---|
+| `supabase start` / `db reset` | yes | a hosted Supabase project; `npm run db:push` applies migrations over a direct connection |
+| `supabase gen types --local` | yes | `npm run db:types`, which uses `--remote=<url>` |
+| `psql -f tests/db/*.sql` | a Postgres client install | `npm run test:db`, which speaks the wire protocol through `pg` |
+| "proves migrations apply from zero" | `db reset` | `npm run test:db -- --fresh`, which builds the schema from nothing |
+
+The last row is the interesting one. `--fresh` applies `scripts/sql/supabase-shim.sql` and then every migration in order, so the from-zero guarantee survives the change. The shim supplies the only four things the schema needs from Supabase: an `auth` schema containing `auth.users`, `auth.uid()`, the three roles, and — easy to overlook — Supabase's open default grants on new tables in `public`.
+
+That last one matters more than it looks. Migration 0015 exists precisely to *revoke* those grants. Had the shim not reproduced them, CI would be testing a database that started closed, and the test proving `anon` cannot read `customers` would pass for the wrong reason.
+
+CI runs the suite against a `postgres:17` service container. That is Docker on GitHub's runner — free, invisible to the owner's machine, and not what the constraint was about.
+
+One honest limitation: the shim is not Supabase, and it can drift. It is kept narrow and faithful on purpose (`auth.uid()` is a verbatim copy, fallback included), and the real check is that `npm run db:push` against the hosted project exercises the same migrations against the real thing.
+
+---
+
+## D-015 — Composite foreign keys on `(business_id, id)` throughout
+
+**Date:** 2026-11-25 (Phase 1)
+**Status:** Accepted — an addition, not in the spec
+
+Every tenant-owned parent carries a redundant-looking `UNIQUE (business_id, id)`, and every child references it as a pair rather than referencing `id` alone.
+
+The reason is a gap that is easy to miss: **Row-Level Security does not make a row coherent.** A booking with `business_id = A` and a `service_id` belonging to tenant B satisfies every policy, because the caller really is a member of A — nothing in RLS looks at whose service it is. The result is tenant B's service name and price on tenant A's invoice, from one mistyped identifier in application code.
+
+Composite foreign keys make that unrepresentable rather than merely unlikely, which is a good trade for four unique indexes nobody queries. `tests/db/0009_tenant_integrity.sql` asserts it with the privileged role specifically so that RLS is not what is being measured.
+
+The same reasoning produced the column-level UPDATE grant on `businesses`. A tenant admin legitimately administers their own row, so no policy can stop them setting their own `plan_id` to the enterprise tier — only a column privilege can.
+
+---
+
+## D-016 — New tables start with no grants
+
+**Date:** 2026-11-25 (Phase 1)
+**Status:** Accepted
+
+Supabase ships `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated`, so a table created by a migration arrives world-granted with RLS as the only thing in the way. Migration 0015 reverses that default for tables created afterwards.
+
+This is a fail-closed choice with a real cost: add a table in a later phase, forget the grants, and PostgREST returns "permission denied" until you write them. That is an afternoon of confusion. The alternative is a table readable by `anon` until somebody notices — and since RLS filters rows but never columns, "readable" means every column, which is exactly how defect B-05 published every staff member's personal phone number.
+
+An afternoon of confusion is the cheaper failure. CONTRIBUTING.md says so where someone adding a table will read it, and `tests/db/0001_schema_invariants.sql` fails if `anon` ever gains a base-table grant.
+
+---
+
+## D-017 — `blocked_range` needs an immutable minute-shift helper
+
+**Date:** 2026-11-25 (Phase 1)
+**Status:** Accepted
+
+The fix for defect B-03 is to put the double-booking exclusion constraint on a buffer-inclusive generated range. The obvious expression for that range does not compile:
+
+```sql
+blocked_range TSTZRANGE GENERATED ALWAYS AS (
+  tstzrange(start_time - make_interval(mins => buffer_before_minutes), ...)
+) STORED
+-- ERROR: generation expression is not immutable
+```
+
+`timestamptz - interval` is STABLE, not IMMUTABLE, because an interval carrying months or days resolves differently depending on the session time zone. Postgres therefore refuses the whole DDL. The snippet in the plan's §13 was written this way and has been corrected there.
+
+`shift_minutes(ts, mins)` narrows the operation to the case that genuinely is immutable: a whole number of minutes is a pure time offset with no calendar fields, so shifting an absolute instant by it gives the same answer in every zone and on both sides of a DST boundary. The `int` parameter is what keeps that true — there is no way to hand the function a month.
+
+So the IMMUTABLE label is accurate rather than a convenient lie. That distinction matters: a wrongly-labelled immutable function in an index expression produces corrupt indexes that return wrong rows, which here would mean a booking the constraint cannot see.

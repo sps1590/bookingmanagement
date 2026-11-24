@@ -1,0 +1,62 @@
+name: Keep-alive
+
+# A free Supabase project is paused after seven days without activity, and a
+# paused project is a total outage: the booking portal 500s and the front desk
+# cannot open the day sheet. Nothing warns you, and the first person to notice
+# is a tenant.
+#
+# Every three days is twice the margin needed, which matters because a free
+# runner can be queued or a token can expire, and one missed run must not be
+# enough to lose the project.
+#
+# See docs/FREE_STACK.md and docs/RUNBOOK.md.
+
+on:
+  schedule:
+    # 02:17 UTC, deliberately not on the hour — scheduled runs cluster there
+    # and get delayed.
+    - cron: "17 2 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Touch the database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      # `pg` is a devDependency, so --omit=dev would leave this job with no
+      # driver. --ignore-scripts is safe here: nothing is built.
+      - run: npm ci --ignore-scripts
+
+      # A write, not a read. It proves the database is reachable *and*
+      # writable, and it leaves `last_seen_at` behind as evidence the schedule
+      # is actually running — which a SELECT never does. One row touched twice
+      # a week is nothing against the 500 MB ceiling.
+      - name: Heartbeat
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set. Without it the project will pause after 7 idle days."
+            exit 1
+          fi
+          node -e "
+            const { Client } = require('pg');
+            (async () => {
+              const c = new Client({
+                connectionString: process.env.SUPABASE_DB_URL,
+                ssl: { rejectUnauthorized: false },
+              });
+              await c.connect();
+              const r = await c.query(
+                \"UPDATE platform_heartbeat SET last_seen_at = NOW(), source = 'github-actions-keepalive' WHERE id = 1 RETURNING last_seen_at\"
+              );
+              if (r.rowCount !== 1) throw new Error('platform_heartbeat row 1 is missing; has 0016 been applied?');
+              console.log('Heartbeat at', r.rows[0].last_seen_at.toISOString());
+              await c.end();
+            })().catch((e) => { console.error(e.message); process.exit(1); });
+          "

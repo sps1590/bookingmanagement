@@ -1,0 +1,105 @@
+name: Backup
+
+# The free Supabase tier has no automated backups and no point-in-time
+# recovery — those are paid features. So this workflow *is* the backup
+# strategy, and a clinic's lost appointment history cannot be reconstructed
+# from anywhere else.
+#
+# ## Read this before enabling it
+#
+# The dump contains every tenant's patient names, phone numbers, email
+# addresses and clinical notes. It is encrypted with AES-256 *before* it
+# leaves this job, and the job refuses to run without a passphrase, because
+# **workflow artifacts on a public repository are downloadable by anyone who
+# can see the repository**. The encryption is not belt-and-braces here; it is
+# the only thing between a public URL and a medical record.
+#
+# If you would rather not have that data pass through GitHub at all, point the
+# upload step somewhere private instead. The dump-and-encrypt steps stay the
+# same. See docs/FREE_STACK.md §5 and docs/RUNBOOK.md.
+#
+# Secrets required:
+#   SUPABASE_DB_URL     direct Postgres connection for the project
+#   BACKUP_PASSPHRASE   long random string; store it somewhere that is not
+#                       this repository, or the backup is worthless
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  dump:
+    name: Encrypted pg_dump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to run unencrypted
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set."
+            exit 1
+          fi
+          if [ ${#PASSPHRASE} -lt 24 ]; then
+            echo "::error::BACKUP_PASSPHRASE is missing or shorter than 24 characters. This dump holds patient records and must not be uploaded in the clear."
+            exit 1
+          fi
+
+      # The runner image ships an older client, and pg_dump refuses to dump a
+      # server newer than itself. Pin to 17 to match the Supabase project.
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+
+      - name: Dump and encrypt
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          OUT="backup-${STAMP}.sql.gz.gpg"
+
+          # Piped straight into gzip and gpg: the plaintext dump never touches
+          # the runner's disk.
+          pg_dump --no-owner --no-privileges --clean --if-exists "$SUPABASE_DB_URL" \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase-fd 0 --output "$OUT" <<< "$BACKUP_PASSPHRASE"
+
+          SIZE=$(stat -c%s "$OUT")
+          echo "Wrote $OUT ($SIZE bytes)"
+
+          # A dump that is suspiciously small usually means the connection
+          # succeeded and the schema was empty — which would quietly replace a
+          # good backup with an empty one.
+          if [ "$SIZE" -lt 2048 ]; then
+            echo "::error::Encrypted dump is only $SIZE bytes. Treating this as a failed backup rather than keeping it."
+            exit 1
+          fi
+
+          echo "artifact=$OUT" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ${{ env.artifact }}
+          path: ${{ env.artifact }}
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: How to restore
+        run: |
+          echo "gpg --batch --passphrase-file pass.txt --decrypt ${{ env.artifact }} \\"
+          echo "  | gunzip | psql \"\$TARGET_DB_URL\""
+          echo ""
+          echo "Rehearse this quarterly against an empty database and record the date"
+          echo "in docs/RUNBOOK.md. An unrehearsed backup is a guess."

@@ -101,13 +101,18 @@ INSERT INTO staff_services (business_id, staff_id, service_id) VALUES
      'bbbb00e1-0000-4000-8000-000000000001');
 
 -- Sunday to Thursday, 10:00-18:00, with a 13:00-14:00 break.
+-- The casts are not decoration: inside a UNION, Postgres resolves an
+-- unadorned quoted literal to `text` rather than leaving it unknown for the
+-- target column to coerce, and the insert then fails on uuid vs text.
 INSERT INTO availability_rules (business_id, staff_id, day_of_week, start_time, end_time, is_break)
-SELECT 'aaaa0000-0000-4000-8000-000000000001', 'aaaa00f1-0000-4000-8000-000000000001',
-       d, TIME '10:00', TIME '18:00', FALSE
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f1-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '10:00', TIME '18:00', FALSE
 FROM generate_series(0, 4) AS d
 UNION ALL
-SELECT 'aaaa0000-0000-4000-8000-000000000001', 'aaaa00f1-0000-4000-8000-000000000001',
-       d, TIME '13:00', TIME '14:00', TRUE
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f1-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '13:00', TIME '14:00', TRUE
 FROM generate_series(0, 4) AS d;
 
 -- A business-wide closure: staff_id IS NULL. The composite foreign key is
