@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Local Supabase defaults. Real secrets never enter CI for these stages;
+  # the database stages run against a throwaway instance.
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_APP_URL: http://localhost:3100
+  LOG_LEVEL: error
+
+jobs:
+  static:
+    name: Lint, format & types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Format check
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Audit (fail on high)
+        run: npm audit --audit-level=high
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test -- --reporter=default
+      - name: Upload coverage
+        if: always()
+        run: npm run test:coverage -- --reporter=default || true
+
+  database:
+    name: Migrations & RLS tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Start Supabase
+        run: npx supabase start --exclude studio,imgproxy,realtime,storage-api,edge-runtime
+
+      # Proves the migration chain applies from zero every time. This is why
+      # schema lives in supabase/migrations and not in the hosted SQL Editor:
+      # a schema you cannot rebuild is a schema you cannot test.
+      - name: Rebuild schema from scratch
+        run: npx supabase db reset --no-seed
+
+      - name: Apply seed
+        run: npx supabase db reset
+
+      - name: Database tests (RLS, double-booking)
+        run: npm run test:db
+
+      - name: Check generated types are current
+        run: |
+          npx supabase gen types typescript --local > /tmp/types.ts
+          if ! diff -q /tmp/types.ts lib/supabase/types.ts; then
+            echo "::error::lib/supabase/types.ts is stale. Run 'npm run db:types' and commit."
+            diff /tmp/types.ts lib/supabase/types.ts || true
+            exit 1
+          fi
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: [static]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Supabase
+        run: npx supabase start --exclude studio,imgproxy
+
+      - name: Resolve Supabase keys
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(npx supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Playwright
+        run: npx playwright test --project=chromium
+
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup

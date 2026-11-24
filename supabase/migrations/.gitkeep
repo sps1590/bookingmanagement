@@ -1,0 +1,23 @@
+Migrations land here in Phase 1, forward-only and numbered:
+
+  0001_extensions.sql       uuid-ossp, btree_gist, pgcrypto, citext
+  0002_plans.sql            subscription_plans + seeded tiers
+  0003_tenancy.sql          businesses, business_members, branches, platform_admins
+  0004_catalog.sql          services, staff_resources, staff_services
+  0005_availability.sql     availability_rules, availability_overrides
+  0006_crm.sql              customers
+  0007_bookings.sql         bookings (+ blocked_range GIST), booking_history
+  0008_waitlist.sql         waitlist_entries
+  0009_notifications.sql    notification_templates, notification_logs
+  0010_payments.sql         payments, subscription_invoices, sms_topups
+  0011_indexes.sql          performance indexes
+  0012_triggers.sql         updated_at triggers, booking-code sequence
+
+Create one with `npx supabase migration new <name>` so the timestamp prefix is
+consistent. Never edit a migration that has been applied to staging or
+production — write a new one.
+
+Apply the corrections in docs/DEVELOPMENT_PLAN.md §13 as you port the spec's
+SQL. In particular the bookings table must exclude on a buffer-inclusive
+`blocked_range`, not on `slot_range` (defect B-03), or the database will permit
+buffer violations that the slot picker believes it prevented.

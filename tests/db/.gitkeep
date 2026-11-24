@@ -1,0 +1,30 @@
+Database-level tests, run by `npm run test:db` via psql.
+
+These exist because RLS and the double-booking constraint can only be
+meaningfully tested inside the database. A policy that reads correctly in
+review and a policy that actually blocks a cross-tenant SELECT are two
+different things, and the difference is a patient-data breach.
+
+Phase 1 adds:
+  0001_rls_tenant_isolation.sql   Tenant A's JWT reads zero of Tenant B's rows
+  0002_rls_anon_exposure.sql      anon reads zero rows from customers,
+                                  bookings, notification_logs, business_members
+  0003_rls_public_pii.sql         Public staff reads expose no phone or email
+                                  (regression for defect B-05)
+  0004_rls_write_scope.sql        Non-members cannot UPDATE businesses
+
+Phase 2 adds:
+  0010_double_booking.sql         50 concurrent inserts for one slot -> 1 wins
+  0011_buffer_enforcement.sql     Adjacent bookings respect service buffers
+                                  (regression for defect B-03)
+
+Phase 7 adds:
+  0020_role_matrix.sql            5 roles x ~20 actions
+
+Convention: each file raises an exception on failure so psql exits non-zero.
+
+  DO $$ BEGIN
+    IF (SELECT count(*) FROM bookings) <> 0 THEN
+      RAISE EXCEPTION 'tenant isolation broken: saw % rows', (SELECT count(*) FROM bookings);
+    END IF;
+  END $$;

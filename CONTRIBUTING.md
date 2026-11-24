@@ -1,0 +1,57 @@
+# Contributing
+
+## Before you push
+
+```bash
+npm run verify
+```
+
+Format, lint, typecheck and unit tests. CI runs the same checks plus the database and E2E stages.
+
+## Commits
+
+[Conventional Commits](https://www.conventionalcommits.org/). The type prefix is what makes the history readable at phase boundaries.
+
+```
+feat(booking): add slot grid to public portal
+fix(slots): respect staff_services mapping in availability
+chore(ci): cache Playwright browsers
+docs(plan): record Next 16 decision
+refactor(api): extract shared notification queueing
+test(db): add buffer enforcement regression
+```
+
+Scopes in use: `booking`, `slots`, `tenancy`, `rls`, `notify`, `exports`, `payments`, `admin`, `staff`, `api`, `ci`, `plan`.
+
+## Branches
+
+Branch from `main`, one branch per phase task. `main` is protected and requires CI green.
+
+```
+phase1/tenancy-migrations
+phase2/slot-engine-gates
+```
+
+## Adding a UI component
+
+```bash
+npx shadcn@latest add dialog
+```
+
+The CLI is intentionally not a project dependency (see [docs/DECISIONS.md](docs/DECISIONS.md) D-003). Generated files land in `components/ui/` and are excluded from Prettier and some lint rules — treat them as vendored.
+
+## Changing the database
+
+1. `npx supabase migration new <descriptive_name>`
+2. Write forward-only SQL. Never edit a migration that has reached staging.
+3. `npm run db:reset` — proves it applies from zero.
+4. `npm run db:types` — regenerate types, and commit the result. CI fails if it is stale.
+5. Add or update the matching assertions in `tests/db/`.
+
+If a change touches RLS, the test comes first. A policy that reads correctly in review and a policy that actually blocks a cross-tenant `SELECT` are different things, and the gap between them is a patient-data breach.
+
+## Two things that will fail review
+
+**Importing `lib/supabase/admin.ts` outside tenant signup, the notification worker, payment webhooks or the Super Admin console.** It bypasses Row-Level Security, which is the only boundary between one clinic's records and another's.
+
+**Hardcoding a user-facing label or a timezone.** Labels come from the tenant's `terminology_config` — a dentist's "Patient" is a salon's "Client". Times are rendered in the business's own `timezone` column, never in `'Asia/Dhaka'` literally, even though that is the default. The source spec gets both of these wrong in its SQL (defects B-20 and the terminology layer in §1.2); we are not copying that.
