@@ -1,8 +1,10 @@
 # Booking Management
 
-Multi-tenant SaaS booking and appointment platform for appointment-based businesses — clinics, dental practices, salons, spas, consultants and workshops. Each business gets a Business ID, a branded public booking portal, staff schedules, conflict-free slot booking, automated SMS/WhatsApp/Email reminders and one-click booking exports.
+Multi-tenant SaaS booking and appointment platform for appointment-based businesses — clinics, dental practices, salons, spas, consultants and workshops. Each business gets a Business ID, a branded public booking portal, staff schedules, conflict-free slot booking, automated reminders and one-click booking exports.
 
 **Status: Phase 0 complete — scaffold only.** No schema, no booking flow yet. See [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the 11-phase build order and the exit criteria for each phase.
+
+**Runs entirely on free tiers.** No paid service, and nothing that needs a card on file. [docs/FREE_STACK.md](docs/FREE_STACK.md) is the authority on what that permits; it is also why there is no SMS channel.
 
 ## Stack
 
@@ -10,12 +12,13 @@ Multi-tenant SaaS booking and appointment platform for appointment-based busines
 |---|---|
 | Frontend | Next.js 16 (App Router), React 19, TypeScript strict |
 | Styling | Tailwind CSS 4, shadcn/ui (Base UI primitives) |
-| Backend | Supabase — PostgreSQL 17, Auth, Row-Level Security, Edge Functions, Realtime |
+| Backend | Supabase free — PostgreSQL 17, Auth, Row-Level Security, Edge Functions, Realtime |
 | Scheduler | `pg_cron` + Edge Functions |
+| Notifications | Email (Resend/Brevo), web push (VAPID), Telegram, `.ics` calendar invites |
 | Testing | Vitest (unit), Playwright (E2E), psql (RLS & concurrency) |
-| Hosting | Vercel + Supabase Cloud, GitHub Actions CI |
+| Hosting | Netlify free + Supabase free, GitHub Actions CI |
 
-Two deliberate deviations from the source spec's recommended stack are recorded in [docs/DECISIONS.md](docs/DECISIONS.md).
+Deliberate deviations from the source spec's recommended stack are recorded in [docs/DECISIONS.md](docs/DECISIONS.md) — the significant ones being Next 16 instead of 15, and dropping SMS, WhatsApp and the payment gateways on cost grounds.
 
 ## Getting started
 
@@ -66,7 +69,10 @@ supabase/migrations           Forward-only schema. The source of truth.
 tests/{unit,e2e,db}           Vitest · Playwright · psql
 ```
 
-## Two rules worth knowing before you commit
+## Three rules worth knowing before you commit
+
+**No service enters the project without an entry in [docs/FREE_STACK.md](docs/FREE_STACK.md).** Its table records the real limit and the behaviour at that limit. A service that needs a card to start is not free, it is a bill with a delay — and "free for personal use" is a licence restriction, not a discount, which is why this project is not on Vercel.
+
 
 **Schema changes go in `supabase/migrations/`, never the hosted SQL Editor.** CI rebuilds the database from zero on every pull request; a schema you cannot rebuild is a schema you cannot test.
 

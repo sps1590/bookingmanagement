@@ -20,24 +20,26 @@ const clientSchema = z.object({
 const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-  // Phase 5 — notifications
-  SMS_PROVIDER: z.enum(["sslwireless", "bulksmsbd", "mimsms", "log"]).default("log"),
-  SMS_API_KEY: z.string().optional(),
-  SMS_SENDER_ID: z.string().optional(),
-  WHATSAPP_PHONE_ID: z.string().optional(),
-  WHATSAPP_TOKEN: z.string().optional(),
+  // Phase 5 — notifications. Free channels only; see docs/FREE_STACK.md §3.
+  // There is deliberately no SMS or WhatsApp config: neither has a free tier
+  // for business-initiated reminders, so neither is in the product.
+  //
+  // `log` writes to the console instead of sending, so a dev run never emails
+  // a real patient.
+  NOTIFY_EMAIL_PROVIDER: z.enum(["resend", "brevo", "log"]).default("log"),
   RESEND_API_KEY: z.string().optional(),
+  BREVO_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().email().optional(),
 
-  // Phase 8 — payments
-  SSLCOMMERZ_STORE_ID: z.string().optional(),
-  SSLCOMMERZ_STORE_PASS: z.string().optional(),
-  BKASH_APP_KEY: z.string().optional(),
-  BKASH_APP_SECRET: z.string().optional(),
-  BKASH_USERNAME: z.string().optional(),
-  BKASH_PASSWORD: z.string().optional(),
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  // Web push needs no provider account at all — generate the pair once with
+  // `npx web-push generate-vapid-keys`. The only notification channel with
+  // no ceiling.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+
+  // Staff/owner digests. Free and unlimited.
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
 
   // Edge Function / cron shared secret
   CRON_SECRET: z.string().min(16).optional(),

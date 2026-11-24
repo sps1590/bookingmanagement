@@ -77,3 +77,61 @@ Worth knowing: Sentry v11 **removed `sendDefaultPii`** in favour of a granular `
 Another project on this machine serves on 3000. When that happens Next silently shifts to the next free port while Playwright keeps polling the port it was told about, and the suite dies on a `webServer` timeout that reads like a product failure. The test port is pinned to 3100 (override with `PLAYWRIGHT_PORT`).
 
 The readiness probe is `/api/v1/health` rather than `/`, because in dev Turbopack compiles routes on demand: a server already answering `/` can still 404 an API route, which failed the first E2E run for a reason unrelated to the code.
+
+---
+
+## D-007 — The platform must run entirely on free tiers
+
+**Date:** 2026-11-24 (after Phase 0)
+**Status:** Accepted — constraint, set by the project owner
+
+No paid service, no trial that expires into a bill, and no tier whose terms forbid the use we intend. [FREE_STACK.md](FREE_STACK.md) is the authority and holds the full audit; D-008 through D-010 record the choices this forced.
+
+This is a hard constraint, not a preference, so it outranks the source spec's recommended stack wherever the two disagree.
+
+---
+
+## D-008 — Netlify, not Vercel
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+The spec recommends Vercel. Vercel's free Hobby tier is **non-commercial use only** — a licence restriction, not a usage limit — and this platform is intended to charge tenants. Staying on Hobby would mean either breaching the terms or migrating a production Next.js app under revenue pressure, which is the worst possible moment to do it.
+
+Chose Netlify's free tier: commercial use permitted, official Next.js runtime support, 100 GB bandwidth and 300 build minutes a month. Build minutes are the real ceiling (~100 deploys/month), not bandwidth.
+
+Cloudflare Workers was the alternative and has more headroom, but Next.js there runs through the OpenNext adapter rather than first-party support. For a solo developer, lower risk beats more headroom.
+
+---
+
+## D-009 — No SMS, and no WhatsApp either
+
+**Date:** 2026-11-24
+**Status:** Accepted — owner's decision on SMS, extended to WhatsApp for consistency
+
+SMS in Bangladesh has no free tier: SSL Wireless, BulkSMSBD and MimSMS all bill per message. The owner chose to drop SMS entirely rather than route it through a tenant-funded gateway.
+
+**WhatsApp was dropped for the same reason, and this needs stating because the spec lists it as a free-looking alternative.** Meta's Cloud API only gives free *user-initiated* service conversations. An appointment reminder is business-initiated, which makes it a utility template, which is billed per message. It has the same cost property as SMS, so leaving it in would have left a paid dependency inside a plan that claims to be free.
+
+Remaining channels, all genuinely free: **email** (Resend 3,000/month), **web push** (VAPID — no service, no account, no ceiling), **Telegram** (Bot API, unlimited, best for staff and owner digests), and **`.ics` calendar invites**.
+
+**The consequence is real and should not be glossed over.** The spec's no-show-reduction promise assumes you can reach a customer who gave you nothing but a phone number. Without SMS you cannot. The strongest free substitute is the calendar invite — the customer's own calendar app then does the reminding, at no cost to us — which is why the `.ics` file is treated as a first-class Phase 5 deliverable with stable `UID`, incremented `SEQUENCE` and `VALARM` triggers, rather than as a nice-to-have link.
+
+The `lib/notify/` adapter interface deliberately keeps the seam SMS would have used. Adding a tenant-funded gateway later is one new file and a config flag.
+
+---
+
+## D-010 — Manual payment verification instead of a gateway
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+Stripe cannot receive payouts in Bangladesh. bKash and SSLCommerz merchant accounts require business registration plus setup and per-transaction fees. None is free.
+
+Deposits and platform subscriptions therefore use manual transaction-ID verification: the customer pays to the tenant's own bKash/Nagad number and enters the TrxID; a receptionist verifies it against their statement and marks the booking paid. This is already how most small businesses in Bangladesh operate, so it reads as familiar rather than as a compromise.
+
+Plan *enforcement* — staff caps, booking caps, feature flags — is still real code in Phase 8. Only the money movement is manual.
+
+A manual flow loses guards an automated gateway gives for free, so Phase 8 must add them explicitly: a TrxID unique per tenant enforced by a constraint, verification audited to a named user, and expected-versus-claimed amounts shown side by side at the desk. Marking a booking paid is the one action in this product where a dishonest employee can steal money.
+
+The `PaymentGateway` interface stays, so a real merchant account plugs in behind the same seam later.

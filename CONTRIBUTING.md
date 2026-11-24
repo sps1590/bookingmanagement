@@ -21,7 +21,7 @@ refactor(api): extract shared notification queueing
 test(db): add buffer enforcement regression
 ```
 
-Scopes in use: `booking`, `slots`, `tenancy`, `rls`, `notify`, `exports`, `payments`, `admin`, `staff`, `api`, `ci`, `plan`.
+Scopes in use: `booking`, `slots`, `tenancy`, `rls`, `notify`, `exports`, `payments`, `admin`, `staff`, `api`, `ci`, `plan`, `docs`.
 
 ## Branches
 
@@ -50,8 +50,10 @@ The CLI is intentionally not a project dependency (see [docs/DECISIONS.md](docs/
 
 If a change touches RLS, the test comes first. A policy that reads correctly in review and a policy that actually blocks a cross-tenant `SELECT` are different things, and the gap between them is a patient-data breach.
 
-## Two things that will fail review
+## Three things that will fail review
 
-**Importing `lib/supabase/admin.ts` outside tenant signup, the notification worker, payment webhooks or the Super Admin console.** It bypasses Row-Level Security, which is the only boundary between one clinic's records and another's.
+**Adding a dependency on a paid service.** The platform runs entirely on free tiers — see [docs/FREE_STACK.md](docs/FREE_STACK.md), which every new service must be added to with its real limit. Check the licence terms as well as the price: Vercel Hobby is free and still disallowed here, because "free for personal use" is a restriction, not a discount. If a capability has no free option, say so and change the product, as D-009 did for SMS.
+
+**Importing `lib/supabase/admin.ts` outside tenant signup, the notification worker, payment verification or the Super Admin console.** It bypasses Row-Level Security, which is the only boundary between one clinic's records and another's.
 
 **Hardcoding a user-facing label or a timezone.** Labels come from the tenant's `terminology_config` — a dentist's "Patient" is a salon's "Client". Times are rendered in the business's own `timezone` column, never in `'Asia/Dhaka'` literally, even though that is the default. The source spec gets both of these wrong in its SQL (defects B-20 and the terminology layer in §1.2); we are not copying that.

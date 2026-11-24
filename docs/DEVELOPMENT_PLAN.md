@@ -16,6 +16,7 @@ Rules of engagement:
 2. **Phase 1 and 2 are not negotiable and not parallelisable.** Tenancy and the slot engine are the whole product; everything else is UI on top.
 3. **The spec's SQL is a draft, not production code.** Section 13 lists the defects found in it. The blockers (B-prefix) must be fixed inside the phase where they are listed, before that phase's exit test.
 4. Build **vertically**: one feature end-to-end (DB → RPC → API route → UI → test) rather than all DB, then all API. Each phase below is already sliced that way.
+5. **Everything runs on free tiers.** [FREE_STACK.md](FREE_STACK.md) is the authority on what that permits, and no service enters the project without an entry in its table. This constraint already removed SMS, WhatsApp, Vercel, Stripe and the payment gateways from the spec's recommended stack — see §1.5.
 
 ### Mapping to the spec's own roadmap
 
@@ -30,6 +31,28 @@ Total: **11–12 weeks** for one full-time developer. The spec's 10 weeks is ach
 
 ---
 
+## 1.5 The zero-cost constraint
+
+The platform runs entirely on free tiers. [FREE_STACK.md](FREE_STACK.md) holds the full audit — every service, its real limit, and the behaviour at that limit. The parts that change what gets built:
+
+| Spec said | Reality | This plan does |
+|---|---|---|
+| Vercel hosting | Hobby tier is non-commercial only | Netlify free (commercial permitted, official Next support) |
+| SMS reminders | No free tier in Bangladesh, billed per message | **Dropped.** Email + web push + Telegram + `.ics` |
+| WhatsApp reminders | Only user-initiated conversations are free; a reminder is a billed utility template | **Dropped** from the default build; adapter seam kept |
+| Stripe / bKash / SSLCommerz | Stripe cannot pay out in BD; merchant accounts need registration and fees | Manual TrxID verification (Phase 8) |
+| 3 Supabase projects | Free tier allows 2 | Local dev + staging + prod |
+| PITR backups | Paid feature; free tier has none | Scheduled `pg_dump` from Phase 1 |
+
+**The one that costs real product value is SMS.** The spec's no-show promise assumes you can reach a customer who gave you only a phone number; without SMS you cannot. The mitigation is to lean on the calendar invite — the customer's own calendar app then reminds them, free — plus an encouraged-but-optional email and a web push opt-in. FREE_STACK.md §3 sets out who each free channel actually reaches, and it is worth reading before Phase 3 designs the booking form, because that form is where the email address and the push opt-in have to be won.
+
+Two obligations this creates early, which must not slide to a cleanup phase:
+
+- **A keep-alive ping in Phase 1.** Free Supabase projects pause after 7 days idle, and a paused project is an outage a tenant discovers before you do.
+- **A `pg_dump` backup job in Phase 1.** Free tier has no automated backups, and losing a clinic's appointment history is unrecoverable.
+
+---
+
 ## 1. Phase summary
 
 | # | Phase | Length | Ships |
@@ -39,10 +62,10 @@ Total: **11–12 weeks** for one full-time developer. The spec's 10 weeks is ach
 | 2 | Scheduling engine | 1 week | Hardened slot RPCs, zero double-booking under load |
 | 3 | Public booking portal | 1 week | A stranger can book online end-to-end |
 | 4 | Admin dashboard & booking ops | 1 week | Reception desk runs a real day on it — **MVP** |
-| 5 | Notification & reminder engine | 1.5 weeks | SMS/WhatsApp/Email queue, 24h + 1h reminders |
+| 5 | Notification & reminder engine | 1.5 weeks | Email/push/Telegram queue, 24h + 1h reminders |
 | 6 | Self-service manage & exports | 1 week | Token reschedule/cancel, XLSX/CSV/PDF, daily digest |
 | 7 | Staff portal & RBAC hardening | 1 week | Staff sees only own queue; role policies proven |
-| 8 | Monetization: plans, quotas, payments | 1.5 weeks | Plan limits enforced, deposits via bKash/SSLCommerz/Stripe |
+| 8 | Monetization: plans, quotas, payments | 1.5 weeks | Plan limits enforced, deposits via manual TrxID verification |
 | 9 | Waitlist, analytics, multi-branch, domains | 1 week | Scale features + Super Admin console |
 | 10 | Hardening, QA & launch | 1 week | Load-tested, security-reviewed, monitored, live |
 
@@ -56,11 +79,11 @@ Total: **11–12 weeks** for one full-time developer. The spec's 10 weeks is ach
 
 - `git init`; `main` + branch protection; Conventional Commits.
 - `create-next-app` — Next.js 15 App Router, TypeScript strict, Tailwind, Shadcn/UI, ESLint + Prettier.
-- Three Supabase projects: `dev`, `staging`, `prod`. Install Supabase CLI; `supabase init`; `supabase link`.
+- **Two** hosted Supabase projects — `staging` and `prod` — because the free tier allows two. `dev` is the local Docker stack. Install Supabase CLI; `supabase init`; `supabase link`.
 - Decide migration discipline now: **all schema lives in `supabase/migrations/*.sql`**, never hand-typed in the SQL Editor. (The spec says "paste into the SQL Editor" — don't. You will need repeatable deploys and a rollback story.)
 - Typed DB client: `supabase gen types typescript` wired to an `npm run db:types` script.
 - Testing harness: Vitest (unit), Playwright (E2E), pgTAP or plain SQL assertion scripts (database).
-- GitHub Actions: lint → typecheck → unit → `supabase db reset` on an ephemeral Postgres → pgTAP → Playwright → deploy preview to Vercel.
+- GitHub Actions: lint → typecheck → unit → `supabase db reset` on an ephemeral Postgres → pgTAP → Playwright → deploy preview to Netlify. Keep the repo **public** if you can: Actions minutes are unlimited on public repos and capped at 2,000/month on private ones, and the Docker-heavy database job is what eats them.
 - Error tracking (Sentry) and structured server logging from day one.
 - Seed script (`supabase/seed.sql`) creating 2 tenants, 3 staff, 5 services, 1 week of availability. Every later phase tests against this.
 
@@ -100,14 +123,13 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY        # server only, never in a client bundle
 NEXT_PUBLIC_APP_URL
-SMS_PROVIDER / SMS_API_KEY / SMS_SENDER_ID
-WHATSAPP_PHONE_ID / WHATSAPP_TOKEN
-RESEND_API_KEY / MAIL_FROM
-SSLCOMMERZ_STORE_ID / SSLCOMMERZ_STORE_PASS
-BKASH_APP_KEY / BKASH_APP_SECRET / BKASH_USERNAME / BKASH_PASSWORD
-STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+RESEND_API_KEY / MAIL_FROM                     # email, the one paid-looking thing that is free
+VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT   # web push, no service required
+TELEGRAM_BOT_TOKEN                             # optional, free
 CRON_SECRET                      # shared secret for Edge Function invocation
 ```
+
+No SMS, WhatsApp or payment-gateway variables: §1.5 removed all of them. Generate the VAPID pair once with `npx web-push generate-vapid-keys` — web push needs no account and no provider, which makes it the only notification channel with no limit at all.
 
 ### Exit criteria
 
@@ -116,7 +138,7 @@ CRON_SECRET                      # shared secret for Edge Function invocation
 - [x] Unit harness green (Vitest, 9 tests) and E2E green (Playwright, 4 tests across desktop + mobile).
 - [x] Generated DB types placeholder imports cleanly; `npm run db:types` wired.
 - [ ] **Blocked — needs Docker Desktop:** `supabase db reset` runs the migration chain + seed from scratch. Cannot be verified on this machine; `docker` is not installed. Install Docker Desktop before starting Phase 1, then run `npm run db:start && npm run db:reset`. The CI `database` job covers this on GitHub runners.
-- [ ] **Needs accounts:** `main` deploys automatically to a Vercel URL. Requires connecting the repo to Vercel and creating the dev/staging/prod Supabase projects.
+- [ ] **Needs accounts:** `main` deploys automatically to a Netlify URL. Requires connecting the repo to Netlify and creating the two hosted Supabase projects (staging, prod).
 
 Decisions taken during Phase 0 — including the move to Next 16 — are recorded in [DECISIONS.md](DECISIONS.md).
 
@@ -186,7 +208,15 @@ The spec's RLS block has two real security holes. Treat its policies as a sketch
 - Onboarding wizard (`/app/onboarding`): Industry → Business details → First service → Working hours → Go live. Resumable; progress stored on the business row.
 - Auth: Supabase Auth email + password for staff and admins. Customers stay guest-first (phone, optional OTP) — don't force account creation on a patient booking a serial.
 
-### 3.4 Database tests (the point of this phase)
+### 3.4 Free-tier survival jobs
+
+Both of these exist because of the hosting constraint (§1.5), and both belong here — the moment a hosted project exists — not in Phase 10.
+
+- **Keep-alive.** A GitHub Actions workflow on a 3-day schedule hits `/api/v1/health` and runs a trivial query against prod. Free Supabase projects pause after 7 days idle, and a paused project is an outage your tenant finds before you do.
+- **Backups.** A daily workflow runs `pg_dump` against prod, encrypts the output, and uploads it as a workflow artifact (90-day retention, free). The free tier has no automated backups whatsoever, and a clinic's lost appointment history cannot be reconstructed. The dump contains every tenant's customer records: encrypt it, and never let it reach a public repo.
+- Rehearse a restore into the local Docker instance before Phase 10 signs off. An unrehearsed backup is a guess.
+
+### 3.5 Database tests (the point of this phase)
 
 Write these in `tests/db/` and run them in CI:
 
@@ -364,11 +394,20 @@ WHERE id IN (
 
 - Exponential backoff on failure (1m, 5m, 30m, 2h), `max_attempts = 4`, then `failed` with `last_error`.
 - Reaper: rows stuck in `sending` for over 10 minutes return to `queued`.
-- **M-08 — SMS credits are never debited.** `businesses.sms_balance` and `subscription_plans.monthly_sms_quota` exist and are sold in the plan table, but nothing decrements them. Debit atomically on a successful send; skip and log when the balance is zero; alert the owner below a threshold.
+- **M-08 — the spec's SMS credit accounting is now moot.** `businesses.sms_balance` and `subscription_plans.monthly_sms_quota` exist in the schema but there is no SMS channel to spend them on (§1.5). Keep the columns — they are the natural home for a future tenant-funded gateway — but do not build quota logic for a channel that does not exist. What *does* need a cap is email: Resend's free tier is 3,000/month across all tenants, so track monthly email sends per business and degrade to push-only when the platform total approaches the ceiling.
+- **Retention, built now.** `notification_logs` grows one row per message per recipient forever, against a 500 MB database. Add a job that deletes `sent` rows older than 90 days while rolling counts into a summary table. Build it with the table, not when the database fills.
 
 ### 7.2 Channel adapters
 
-`lib/notify/` — one interface, four implementations: SMS (SSL Wireless / BulkSMSBD / MimSMS, provider-switchable per environment), WhatsApp (Meta Cloud API with pre-approved templates), Email (Resend or Postmark), Push (**N-03:** listed as a channel in the spec with no implementation path — defer, and say so on the roadmap). Each returns a normalised `{ ok, providerId, raw }` stored in `provider_response`.
+`lib/notify/` — one interface, three implementations, all free (§1.5 removed SMS and WhatsApp):
+
+- **Email** (Resend free: 3,000/month, 100/day). The primary customer channel. Must attach the `.ics` invite.
+- **Web Push** (VAPID). No service, no account, no limit — the only channel with no ceiling. Needs a service worker, a subscription table keyed to customer or staff user, and graceful handling of expired subscriptions (`410 Gone` → delete the row). Note the iOS caveat: Safari requires the site be added to the Home Screen before push works at all, so treat push as a bonus on iOS, never the only reminder.
+- **Telegram** (Bot API, free, unlimited). Ideal for the staff morning digest and the owner's nightly summary — internal recipients who will happily link a bot. Few customers in Bangladesh will.
+
+Each returns a normalised `{ ok, providerId, raw }` stored in `provider_response`. The interface keeps the seam the SMS and WhatsApp adapters would have used, so a tenant-funded gateway later is one new file and a config flag, not a refactor.
+
+**The `.ics` calendar invite is the most important deliverable in this phase.** Without SMS, the customer's own calendar app is the only reminder mechanism that reaches someone who gave you nothing but a phone number and costs nothing to operate. Treat it as a first-class feature: a correct `VEVENT` with `VALARM` triggers at −24h and −1h, a stable `UID` so a reschedule updates the existing entry rather than creating a duplicate, `SEQUENCE` incremented on change, and `METHOD:CANCEL` on cancellation.
 
 ### 7.3 Templates and scheduling
 
@@ -379,11 +418,15 @@ WHERE id IN (
 
 ### Exit criteria
 
-- [ ] Booking → confirmation SMS in the customer's hands within 60 seconds (real gateway, staging number).
+- [ ] Booking → confirmation email in the customer's inbox within 60 seconds, with a working `.ics` attachment.
+- [ ] The `.ics` imports correctly into Google Calendar and the stock Android calendar, and its −24h/−1h alarms fire.
+- [ ] A reschedule **updates** the existing calendar entry rather than creating a second one (stable `UID`, incremented `SEQUENCE`).
 - [ ] Two deliberately overlapping worker runs send each message exactly once.
 - [ ] A reschedule cancels the old reminders *and* queues new 24h/1h ones at the right times (regression for B-18).
-- [ ] A simulated gateway outage retries with backoff and settles; nothing is lost.
-- [ ] A zero-balance tenant: the send is skipped, logged and the owner alerted; the balance never goes negative.
+- [ ] A simulated provider outage retries with backoff and settles; nothing is lost.
+- [ ] Web push reaches an Android Chrome subscriber; an expired subscription is deleted rather than retried forever.
+- [ ] Staff digest arrives over Telegram.
+- [ ] The retention job prunes `sent` rows older than 90 days without losing aggregate counts.
 
 ---
 
@@ -442,28 +485,40 @@ WHERE id IN (
 
 ## 10. Phase 8 — Monetization: plans, quotas, payments (1.5 weeks)
 
+All of the money *movement* here is manual, because no payment gateway in Bangladesh is free to the platform (§1.5). All of the money *enforcement* is real code and gets built exactly as specified — that is the part that actually protects the business.
+
 ### 10.1 Plan enforcement
 
-A shared layer that reads the tenant's plan and enforces `max_branches`, `max_staff`, `max_monthly_bookings`, `monthly_sms_quota` and the `features` JSONB (`exports`, `whatsapp`, `custom_domain`). Enforce **server-side in the RPC and in the API route** — never only by hiding a button. Over-limit responses return `PLAN_LIMIT_REACHED` with an upgrade CTA. Add a `plan_usage` view for the dashboard meter.
+A shared layer that reads the tenant's plan and enforces `max_branches`, `max_staff`, `max_monthly_bookings` and the `features` JSONB (`exports`, `custom_domain`). Enforce **server-side in the RPC and in the API route** — never only by hiding a button. Over-limit responses return `PLAN_LIMIT_REACHED` with an upgrade CTA. Add a `plan_usage` view for the dashboard meter.
 
-### 10.2 Subscription billing
+### 10.2 Subscription billing — manual
 
-`subscription_invoices`, a monthly cron to generate them, payment capture, a grace period, and a documented downgrade behaviour — decide explicitly what happens to staff 11–15 when a Pro plan lapses, because the spec does not say. Plus SMS credit top-up packs writing to `sms_topups`.
+The tenant pays the platform owner directly (bKash, bank transfer, cash). The Super Admin console records the payment and sets `plan_id` plus an expiry date; a daily job downgrades expired tenants to Free. Still build: `subscription_invoices` as the record of what was charged and when, a grace period, and an explicit documented downgrade behaviour — decide what happens to staff 11–15 when a Pro plan lapses, because the spec does not say. Suspend the extra staff rather than deleting them.
 
-### 10.3 Booking deposits
+### 10.3 Booking deposits — manual TrxID verification
 
-- Per-business toggle plus per-service `deposit_required`.
-- Adapters behind one `PaymentGateway` interface: **SSLCommerz** and **bKash** (local) and **Stripe** (global).
-- Flow: create the booking as `pending` → redirect to gateway → webhook confirms → status `confirmed` and `payment_status` updated → `queue_booking_notifications`. A `pending` booking holds the slot (the GIST predicate already includes `pending`) and expires through a sweep job after 15 minutes.
-- Webhooks: signature-verified, idempotent by provider reference, logged to `payments`. Never trust a client-side success redirect.
-- Refunds on cancellation, per the tenant's stated policy.
+This is how most small businesses in Bangladesh already take advance payment, so it is familiar to tenants rather than a compromise.
+
+- Per-business toggle plus per-service `deposit_required`. The tenant displays their own bKash/Nagad number and the expected amount.
+- Flow: customer pays from their own wallet → enters the transaction ID on the booking form → booking is created `pending` with `payment_status = 'unpaid'` → receptionist checks the TrxID against their own statement and marks it paid, which confirms the booking and fires `queue_booking_notifications`.
+- A `pending` booking holds the slot (the GIST predicate already includes `pending`) and is released by a sweep job if unverified after the tenant's configured window.
+- Keep the `PaymentGateway` interface from the original plan behind this flow, so a real merchant account plugs in later without reworking the booking lifecycle.
+
+A manual flow needs guards that an automated gateway would have given you free:
+
+- **TrxID unique per tenant** — someone will reuse one, by mistake or otherwise. Enforce it with a constraint, not a check in the UI.
+- **Audited verification** — every mark-as-paid records which user did it and when. This is the one action in the product where a dishonest employee can steal money.
+- **Amount expected vs amount claimed** shown side by side in the receptionist UI, so a 500 BDT deposit paid as 50 is caught at the desk.
+- **Never auto-confirm on TrxID format alone.** A well-formed string is not a payment.
 
 ### Exit criteria
 
 - [ ] A Free-tier tenant is blocked at booking 51 and at staff member 3, with a working upgrade path.
-- [ ] Sandbox payments succeed on all three gateways and the webhook confirms the booking.
-- [ ] An abandoned payment releases the slot within 15 minutes.
-- [ ] Replaying a webhook does not double-credit.
+- [ ] A deposit booking stays `pending`, holds its slot, and confirms only after a named user verifies the TrxID.
+- [ ] An unverified deposit booking releases the slot after the configured window.
+- [ ] A duplicate TrxID is rejected by a database constraint.
+- [ ] Every verification appears in the audit trail with the acting user.
+- [ ] An expired subscription downgrades automatically and suspends rather than deletes the over-limit staff.
 - [ ] Upgrade and downgrade recalculate limits immediately.
 
 ---
@@ -473,7 +528,7 @@ A shared layer that reads the tenant's plan and enforces `max_branches`, `max_st
 - **M-09 — waitlist automation.** `waitlist_entries` exists with a `notified` status but no logic anywhere. Build: join from the full-day state in Phase 3; on cancellation, find matching `waiting` entries for that date and service, notify FIFO with a short-lived claim link, mark `notified`, expire after N hours, then move to the next. Guard against notifying 50 people for one slot.
 - **Analytics** (`GET /api/v1/admin/analytics/summary`): total bookings, completion rate, no-show percentage, peak-hours heatmap, staff utilisation, repeat-customer rate, estimated vs collected revenue, per-branch comparison. Move to materialised views refreshed hourly if the queries get heavy.
 - **Multi-branch**: branch-scoped dashboards, cross-branch roll-up for owners, per-branch working hours.
-- **Custom domain** (Enterprise): a domains table, verification, the Vercel domain API, and middleware resolving host → tenant.
+- **Custom domain** (Enterprise): a domains table, verification, the Netlify domain API, and middleware resolving host → tenant. The *tenant* buys their own domain, so this costs the platform nothing; the platform's own URL stays a free `*.netlify.app` subdomain until a domain is worth ~$10/yr to you.
 - **Super Admin console** (`/superadmin`, gated by `platform_admins`): tenant directory with booking counts and plans, plan and tier editor, SMS gateway usage, MRR, suspend/activate, and impersonation with an audit trail for support.
 
 ### Exit criteria
@@ -489,8 +544,9 @@ A shared layer that reads the tenant's plan and enforces `max_branches`, `max_st
 
 - **Load test** (k6): 200 concurrent slot queries plus 50 concurrent bookings on one tenant; 10,000 bookings/day across 50 tenants. Watch for GIST contention and slot-query latency.
 - **Security review**: re-run the RLS matrix; verify the service-role key never reaches a client bundle; rate-limit every public endpoint; token brute-force check; OWASP pass on the public portal; confirm the B-05 and B-09 fixes are still in place.
-- **Data**: PITR enabled, a restore rehearsed, and a written retention and deletion policy for customer PII (medical-adjacent data raises the stakes).
-- **Observability**: Sentry, uptime checks, and alerts on queue depth, failed-notification rate, worker lag and payment webhook failures.
+- **Data**: verify the Phase 1 `pg_dump` job is still running and still restorable (PITR is a paid feature, so this job *is* the backup strategy), plus a written retention and deletion policy for customer PII (medical-adjacent data raises the stakes).
+- **Observability**: Sentry free tier (5k errors/month, already inert without a DSN), a GitHub Actions cron uptime check, and alerts on queue depth, failed-notification rate, worker lag and deposit-verification backlog.
+- **Free-tier headroom review**: current DB size against 500 MB, monthly egress against 5 GB, email sends against 3,000/month, Netlify bandwidth against 100 GB. Record the numbers so the first tenant growth spurt is a planned conversation and not an outage.
 - **Docs**: `API.md`, `SCHEMA.md`, `RUNBOOK.md` (gateway outage, stuck queue, restore), a tenant onboarding guide, and a support playbook.
 - **UAT**: three pilot businesses across three industries for one full week.
 - **Launch**: staged rollout, pricing page, Terms and Privacy, support channel.
@@ -533,7 +589,7 @@ Found while reading the spec's SQL in Part II. **B** = blocker (fix before that 
 | M-05 | Med | O(slots × bookings) nested `NOT EXISTS` inside the slot loop | Phase 2 |
 | M-06 | Med | `updated_at` columns with no trigger to maintain them | Phase 1 |
 | M-07 | Med | `customers.no_show_count` is never written | Phase 4 |
-| M-08 | Med | `sms_balance` / `monthly_sms_quota` are never debited | Phase 5 |
+| M-08 | Med | `sms_balance` / `monthly_sms_quota` are never debited — now moot, there is no SMS channel (§1.5). The real cap to track is platform-wide email against Resend's 3,000/month | Phase 5 |
 | M-09 | Med | Waitlist table with no automation, trigger or notify path | Phase 9 |
 | M-10 | Med | Daily digests described in prose only; no function defined | Phase 5 |
 | M-11 | Med | Reschedule token is not rotated, so forwarded links stay live | Phase 6 |
@@ -543,7 +599,7 @@ Found while reading the spec's SQL in Part II. **B** = blocker (fix before that 
 | M-15 | Med | `availability_overrides` doesn't validate custom times when `is_closed = false` | Phase 1 |
 | N-01 | Note | `availability_rules` policy `FOR SELECT USING (TRUE)` publishes every tenant's schedule | Phase 1 |
 | N-02 | Note | Guest OTP is mentioned but never specified (provider, expiry, attempt limits) | Phase 3 |
-| N-03 | Note | Push listed as a notification channel with no implementation path | Deferred |
+| N-03 | Note | Push listed as a notification channel with no implementation path — now promoted to a primary channel, since VAPID web push is the only free option with no ceiling | Phase 5 |
 | N-04 | Note | Spec says "paste into the SQL Editor"; use versioned migrations instead | Phase 0 |
 
 ---
@@ -553,10 +609,14 @@ Found while reading the spec's SQL in Part II. **B** = blocker (fix before that 
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Slot-engine correctness bugs reach production | Double-booked patients; trust destroyed on day one | Phase 2 concurrency suite in CI; GIST as the final backstop; property tests |
-| SMS gateway unreliability in Bangladesh | Missed reminders, no-shows, angry tenants | Multi-provider adapter with failover; backoff; delivery logs visible to owners |
+| **No SMS channel at all** (§1.5) | Customers who gave only a phone number get no reminder; the spec's core no-show promise is weakened | `.ics` calendar invite as the primary free reminder; encouraged email; web push opt-in; adapter seam ready for a tenant-funded gateway. Say this plainly during tenant onboarding |
+| Email provider ceiling — 3,000/month across **all** tenants | Reminders silently stop as tenants are added | Track platform-wide monthly sends; alert at 80%; degrade to push + calendar rather than failing silently; a second free provider (Brevo) is a config change |
+| Free Supabase project pauses after 7 days idle | Outage a tenant discovers before you do | Keep-alive workflow from Phase 1, not Phase 10 |
+| No automated backups on the free tier | Unrecoverable loss of appointment history | Scheduled encrypted `pg_dump` from Phase 1; restore rehearsed before launch |
+| 500 MB database ceiling | Writes fail once reached | `notification_logs` retention job built in Phase 5; headroom reviewed in Phase 10 |
 | Timezone or DST handling | Wrong appointment times | Store `timestamptz` only; one timezone helper; test a non-Dhaka tenant from Phase 2 |
 | RLS misconfiguration | Cross-tenant data leak, medical PII | RLS tests in CI; safe views for all public reads; quarterly policy review |
-| Payment webhook gaps | Lost revenue, stuck bookings | Idempotency keys; reconciliation job; sweep for abandoned `pending` |
+| Manual deposit verification | Employee theft, duplicate TrxIDs, wrong amounts accepted | Unique TrxID constraint per tenant; verification audited to a named user; expected vs claimed amount shown at the desk |
 | Scope creep across 5 portals | Timeline slip | Hard MVP gate at Phase 4; Phases 7–9 are post-revenue |
 | Spec SQL copied as-is | Ships every blocker in §13 | Treat §13 as a checklist, not reading material |
 

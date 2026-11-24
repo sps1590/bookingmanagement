@@ -27,10 +27,16 @@ export const ErrorCode = {
   STAFF_SERVICE_MISMATCH: "STAFF_SERVICE_MISMATCH",
   /** Subscription plan limit hit (staff, branches, monthly bookings). Phase 8. */
   PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED",
-  /** Tenant is out of SMS credit. Phase 5. */
-  SMS_QUOTA_EXHAUSTED: "SMS_QUOTA_EXHAUSTED",
+  /**
+   * Platform-wide free email allowance is spent (Resend: 3,000/month across
+   * all tenants — see docs/FREE_STACK.md). Phase 5 degrades to push and the
+   * calendar invite rather than failing the booking.
+   */
+  NOTIFY_QUOTA_EXHAUSTED: "NOTIFY_QUOTA_EXHAUSTED",
   /** Illegal booking status transition. Phase 2. */
   INVALID_STATUS_TRANSITION: "INVALID_STATUS_TRANSITION",
+  /** A deposit transaction ID was already used by this tenant. Phase 8. */
+  DUPLICATE_TRANSACTION_ID: "DUPLICATE_TRANSACTION_ID",
   PAYMENT_FAILED: "PAYMENT_FAILED",
 } as const;
 
@@ -50,8 +56,9 @@ const STATUS: Record<ErrorCode, number> = {
   RESCHEDULE_LIMIT_REACHED: 422,
   STAFF_SERVICE_MISMATCH: 422,
   PLAN_LIMIT_REACHED: 402,
-  SMS_QUOTA_EXHAUSTED: 402,
+  NOTIFY_QUOTA_EXHAUSTED: 503,
   INVALID_STATUS_TRANSITION: 422,
+  DUPLICATE_TRANSACTION_ID: 409,
   PAYMENT_FAILED: 402,
 };
 

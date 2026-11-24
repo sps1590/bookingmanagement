@@ -1,7 +1,7 @@
 /**
  * Structured JSON logging.
  *
- * One line per event so Vercel/Supabase log drains stay queryable. Never log a
+ * One line per event so Netlify/Supabase log drains stay queryable. Never log a
  * customer phone, email or a reschedule token in full — this is a platform for
  * medical and personal appointments, and logs are the easiest PII leak to
  * create by accident. Use `redactPhone` / `redactToken` for identifiers you

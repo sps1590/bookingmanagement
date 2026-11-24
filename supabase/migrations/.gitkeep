@@ -9,7 +9,10 @@ Migrations land here in Phase 1, forward-only and numbered:
   0007_bookings.sql         bookings (+ blocked_range GIST), booking_history
   0008_waitlist.sql         waitlist_entries
   0009_notifications.sql    notification_templates, notification_logs
-  0010_payments.sql         payments, subscription_invoices, sms_topups
+  0010_payments.sql         payments, subscription_invoices
+                            (manual TrxID verification — no gateway; see
+                            docs/DECISIONS.md D-010. TrxID needs a UNIQUE
+                            constraint per business, not just a UI check.)
   0011_indexes.sql          performance indexes
   0012_triggers.sql         updated_at triggers, booking-code sequence
 
