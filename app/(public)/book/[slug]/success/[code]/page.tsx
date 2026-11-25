@@ -135,9 +135,13 @@ export default async function BookingSuccessPage({
         </p>
       )}
 
+      {/* The customer does not care which phase of a plan anything shipped in,
+          and this line said so until now. What they need to know is that the
+          calendar file above is the reliable reminder: email depends on the
+          business having configured a sender, and this one may not have. */}
       <p className="mt-10 text-xs text-neutral-400">
-        Calendar invites and reminder emails arrive with Phase 5. Until then, the booking is
-        recorded and reception can see it.
+        Add it to your calendar above — that reminder is yours and does not depend on us. Any email
+        we send is in addition to it.
       </p>
 
       <Link

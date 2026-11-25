@@ -119,7 +119,7 @@ export default async function StaffToday() {
 
                 {/* The notes a provider needs to see before the person sits
                     down — an allergy is useless on a screen nobody opens. */}
-                {customer?.notes ? (
+                {customer?.notes && customer.notes !== booking.customer_notes ? (
                   <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
                     {customer.notes}
                   </p>
