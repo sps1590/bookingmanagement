@@ -44,6 +44,12 @@ FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',
                          'aaaa00f1-0000-4000-8000-000000000001',
                          (SELECT work_day FROM probe));
 
+-- These are created by the connection's own role, which is a superuser. The
+-- blocks at the end of this file drop to `authenticated` to make a booking as
+-- a real member of the business would, and without this they cannot read the
+-- scratch tables that tell them which slot to ask for.
+GRANT SELECT ON probe, slot TO authenticated;
+
 -- 0. The happy path, so that every refusal below means something. A booking
 --    is created, the per-tenant daily code is assigned by the trigger, a
 --    token is minted, the buffers are snapshotted from the service, and the
