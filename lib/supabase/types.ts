@@ -428,6 +428,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"rate_limit_hits": {
+                  Row: {
+                    "bucket": string,"hits": number,"window_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bucket": string,"hits"?: number,"window_start": string
+                  }
+                  Update: {
+                    "bucket"?: string,"hits"?: number,"window_start"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"services": {
                   Row: {
                     "buffer_after_minutes": number,"buffer_before_minutes": number,"business_id": string,"category": string | null,"color_hex": string,"created_at": string,"deposit_required": number,"description": string | null,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"price": number,"sort_order": number,"updated_at": string
@@ -766,6 +780,9 @@ isOneToOne: false
               "booking_code": string,"booking_id": string,"status": string
             }[]
                            },
+"check_rate_limit":
+{ Args: { "p_bucket": string,"p_limit": number,"p_window_seconds": number }; Returns: boolean
+                           },
 "create_booking_atomic":
 { Args: { "p_branch_id"?: string,"p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_notes"?: string,"p_customer_phone": string,"p_service_id": string,"p_source"?: string,"p_staff_id": string,"p_start_time": string }; Returns: {
               "booking_code": string,"booking_id": string,"end_time": string,"reschedule_token": string,"staff_id": string,"start_time": string,"status": string
@@ -788,6 +805,11 @@ isOneToOne: false
 "get_available_slots_any":
 { Args: { "p_branch_id"?: string,"p_business_id": string,"p_date": string,"p_service_id": string }; Returns: {
               "slot_end": string,"slot_start": string,"staff_id": string
+            }[]
+                           },
+"get_month_availability":
+{ Args: { "p_business_id": string,"p_month": number,"p_service_id": string,"p_staff_id"?: string,"p_year": number }; Returns: {
+              "day": string,"has_slots": boolean
             }[]
                            },
 "has_role":

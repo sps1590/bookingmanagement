@@ -132,8 +132,16 @@ BEGIN
       AND c.relkind = 'r'
       -- `businesses` is the tenant root: its own id *is* the tenant key. The
       -- others are platform-owned and belong to no tenant.
+      --
+      -- `rate_limit_hits` is on that list deliberately. Its key is a scope and
+      -- a subject — an IP address or a phone number — and the abuse it guards
+      -- against crosses tenants by nature: a script working through every
+      -- clinic on the platform is one caller, not one caller per tenant.
+      -- Keying it by business would reset the allowance at each new target,
+      -- which is the opposite of what a limiter is for.
       AND c.relname NOT IN ('businesses', 'subscription_plans', 'platform_admins',
-                            'platform_heartbeat', 'booking_code_counters')
+                            'platform_heartbeat', 'booking_code_counters',
+                            'rate_limit_hits')
       AND NOT EXISTS (
           SELECT 1 FROM pg_attribute a
           WHERE a.attrelid = c.oid AND a.attname = 'business_id' AND NOT a.attisdropped
