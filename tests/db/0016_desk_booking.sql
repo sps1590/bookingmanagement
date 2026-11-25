@@ -23,6 +23,15 @@
 --
 -- Dr Rahman is still used below for the break assertion, where his fixed
 -- 13:00-14:00 lunch is the point.
+--
+-- "Always open" is 00:00-23:45, and that is not the same as "there is always
+-- a slot in the next hour". Near the end of a Dhaka day the last start that
+-- still fits inside the window has gone by, and the next free time is
+-- tomorrow morning. CI running at 23:35 local found exactly that and failed
+-- for the second time on the clock rather than on the code. So every "inside
+-- the lead time" query below spans today *and* tomorrow: the hour before
+-- midnight is served by tomorrow's 00:00, and the assertion means the same
+-- thing at every hour of the day.
 INSERT INTO staff_resources (id, business_id, branch_id, name)
 VALUES ('aaaa00f9-0000-4000-8000-000000000001',
         'aaaa0000-0000-4000-8000-000000000001',
@@ -52,16 +61,20 @@ DECLARE
     v_desk   INT;
 BEGIN
     SELECT count(*) INTO v_public
-    FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',
-                             'aaaa00e1-0000-4000-8000-000000000001',
-                             'aaaa00f9-0000-4000-8000-000000000001', v_today)
-    WHERE slot_start < NOW() + INTERVAL '60 minutes';
+    FROM generate_series(v_today, v_today + 1, INTERVAL '1 day') AS d
+    CROSS JOIN LATERAL
+        get_available_slots('aaaa0000-0000-4000-8000-000000000001',
+                            'aaaa00e1-0000-4000-8000-000000000001',
+                            'aaaa00f9-0000-4000-8000-000000000001', d::date) AS s
+    WHERE s.slot_start < NOW() + INTERVAL '60 minutes';
 
     SELECT count(*) INTO v_desk
-    FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
-                        'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
-    WHERE slot_start < NOW() + INTERVAL '60 minutes';
+    FROM generate_series(v_today, v_today + 1, INTERVAL '1 day') AS d
+    CROSS JOIN LATERAL
+        get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
+                       'aaaa00e1-0000-4000-8000-000000000001',
+                       'aaaa00f9-0000-4000-8000-000000000001', d::date) AS s
+    WHERE s.slot_start < NOW() + INTERVAL '60 minutes';
 
     IF v_public <> 0 THEN
         RAISE EXCEPTION
@@ -111,12 +124,14 @@ DECLARE
     v_at    TIMESTAMPTZ;
     v_r     RECORD;
 BEGIN
-    SELECT slot_start INTO v_at
-    FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
-                        'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
-    WHERE slot_start < NOW() + INTERVAL '60 minutes'
-    ORDER BY slot_start
+    SELECT s.slot_start INTO v_at
+    FROM generate_series(v_today, v_today + 1, INTERVAL '1 day') AS d
+    CROSS JOIN LATERAL
+        get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
+                       'aaaa00e1-0000-4000-8000-000000000001',
+                       'aaaa00f9-0000-4000-8000-000000000001', d::date) AS s
+    WHERE s.slot_start < NOW() + INTERVAL '60 minutes'
+    ORDER BY s.slot_start
     LIMIT 1;
 
     IF v_at IS NULL THEN
@@ -149,16 +164,18 @@ DECLARE
     v_at    TIMESTAMPTZ;
     v_msg   TEXT;
 BEGIN
-    SELECT slot_start INTO v_at
-    FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
-                        'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
-    WHERE slot_start < NOW() + INTERVAL '45 minutes'
-    ORDER BY slot_start DESC
+    SELECT s.slot_start INTO v_at
+    FROM generate_series(v_today, v_today + 1, INTERVAL '1 day') AS d
+    CROSS JOIN LATERAL
+        get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
+                       'aaaa00e1-0000-4000-8000-000000000001',
+                       'aaaa00f9-0000-4000-8000-000000000001', d::date) AS s
+    WHERE s.slot_start < NOW() + INTERVAL '45 minutes'
+    ORDER BY s.slot_start DESC
     LIMIT 1;
 
     IF v_at IS NULL THEN
-        RETURN;  -- nothing close enough today to make the point
+        RETURN;  -- nothing close enough to make the point
     END IF;
 
     BEGIN
