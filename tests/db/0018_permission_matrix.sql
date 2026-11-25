@@ -149,10 +149,19 @@ SELECT pg_temp.check_value(
     $q$SELECT count(*)::text FROM plan_usage WHERE business_id = 'bbbb0000-0000-4000-8000-000000000001'$q$,
     '0');
 
+-- Refused by the column grant in 0015, not by a policy: `businesses` grants
+-- UPDATE on a named list of columns and `plan_id` is not among them. That is a
+-- stronger answer than an empty result — the statement never runs — and the
+-- expectation here was wrong rather than the schema.
 SELECT pg_temp.check_value(
-    'owner cannot change their own plan',
+    'owner cannot upgrade their own plan',
     $q$WITH u AS (UPDATE businesses SET plan_id = (SELECT id FROM subscription_plans WHERE code = 'enterprise') WHERE id = 'aaaa0000-0000-4000-8000-000000000001' RETURNING 1) SELECT count(*)::text FROM u$q$,
-    '0');
+    'permission denied for table businesses');
+
+SELECT pg_temp.check_value(
+    'owner can still edit their own details',
+    $q$WITH u AS (UPDATE businesses SET phone = '+8801711000099' WHERE id = 'aaaa0000-0000-4000-8000-000000000001' RETURNING 1) SELECT count(*)::text FROM u$q$,
+    '1');
 
 -- =========================================================================
 -- the platform operator — D-012: configuration only, never patient data
