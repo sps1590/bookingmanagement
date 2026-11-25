@@ -79,8 +79,15 @@ jobs:
     env:
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
 
+    # Only this job writes, and only the generated types file.
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The default token cannot push; this one can, and only to this repo.
+          persist-credentials: true
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -105,31 +112,62 @@ jobs:
       - name: Concurrency suite
         run: npm run test:concurrency -- --repeat 3
 
-      # On a mismatch this writes an appliable patch into the job summary, not
-      # just a diff into the log. The log is truncated in the web UI once it
-      # gets long, and a half-shown diff of a 900-line generated file is worse
-      # than none: it invites someone to hand-edit the parts they can see.
-      # `git apply` on the patch below reproduces exactly what `npm run
-      # db:types` would have written, which matters most to whoever does not
-      # have a Postgres to point the generator at.
+      # `lib/supabase/types.ts` is generated from the schema, and generating
+      # it needs a Postgres to introspect. Nobody working on this project
+      # necessarily has one — the test harness builds a throwaway database in
+      # this job and that is the only one around — so hand-maintaining the
+      # file means hand-writing a derived artifact, which is exactly how it
+      # drifts.
+      #
+      # On a pull request the check still fails, with an appliable patch in
+      # the job summary: a PR should not quietly rewrite its own diff.
+      #
+      # On a push to main the job regenerates and commits it. [skip ci] stops
+      # that commit from starting another run.
       - name: Check generated types are current
+        id: types
         run: |
           npx tsx scripts/gen-types.ts /tmp/types.ts
-          if ! diff -q /tmp/types.ts lib/supabase/types.ts; then
-            echo "::error::lib/supabase/types.ts is stale. Run 'npm run db:types' and commit the result."
-            {
-              echo "### \`lib/supabase/types.ts\` is stale"
-              echo
-              echo "Save this as \`types.patch\` and run \`git apply types.patch\`:"
-              echo
-              echo '```diff'
-              diff -u lib/supabase/types.ts /tmp/types.ts \
-                --label a/lib/supabase/types.ts --label b/lib/supabase/types.ts || true
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            diff /tmp/types.ts lib/supabase/types.ts || true
-            exit 1
+          if diff -q /tmp/types.ts lib/supabase/types.ts >/dev/null; then
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          echo "stale=true" >> "$GITHUB_OUTPUT"
+          cp /tmp/types.ts lib/supabase/types.ts
+
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "::notice::Regenerated lib/supabase/types.ts from the schema."
+            exit 0
+          fi
+
+          echo "::error::lib/supabase/types.ts is stale. Run 'npm run db:types' and commit the result."
+          {
+            echo "### \`lib/supabase/types.ts\` is stale"
+            echo
+            echo "Save this as \`types.patch\` and run \`git apply types.patch\`:"
+            echo
+            echo '```diff'
+            git diff -- lib/supabase/types.ts || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Commit the regenerated types
+        if: >-
+          steps.types.outputs.stale == 'true'
+          && github.event_name == 'push'
+          && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/supabase/types.ts
+          git commit -m "chore(types): regenerate from the schema [skip ci]"
+          # Rebase rather than force: a human push that landed while this job
+          # ran must not be thrown away by a bot.
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
 
   e2e:
     name: End-to-end
