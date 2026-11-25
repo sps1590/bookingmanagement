@@ -7,7 +7,7 @@ import { created } from "@/lib/api/response";
 import { logger } from "@/lib/logger";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
 import { requirePublicTenant } from "@/lib/public/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * `POST /api/v1/public/:slug/bookings`
@@ -71,7 +71,14 @@ export const POST = route(
       "That number has made several bookings recently. Please call us instead.",
     );
 
-    const supabase = createAdminClient();
+    // The anon client, not the service role. `create_booking_atomic` is
+    // SECURITY DEFINER and granted to `anon` precisely so this path needs no
+    // privilege: it does every check itself, and the one thing the service
+    // key would add here is the ability for a bug in this file to write to
+    // any tenant. It also made the booking form fail with "Invalid API key"
+    // when that key was wrong, which is a strange way for a public page to
+    // break.
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc("create_booking_atomic", {
       p_business_id: business.id,
       p_service_id: body.serviceId,

@@ -5,7 +5,6 @@ import { parseBody, parseQuery, route } from "@/lib/api/handler";
 import { created, ok } from "@/lib/api/response";
 import { DESK, requireRole } from "@/lib/auth/require-role";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, zonedDayStart } from "@/lib/time/zone";
 
@@ -147,7 +146,12 @@ export const POST = route("admin.bookings.create", async (request: Request) => {
     throw new ApiError(ErrorCode.VALIDATION_FAILED, parsed.message);
   }
 
-  const supabase = createAdminClient();
+  // As the signed-in member, which this path actually requires. 0023 lets
+  // `walk_in`, `phone` and `admin` skip the customer's lead time only for a
+  // member of the business, and it asks `auth.uid()` who that is. The service
+  // role has no `auth.uid()`, so every walk-in booked through the desk was
+  // refused as FORBIDDEN by the gate that was meant to permit it.
+  const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_booking_atomic", {
     p_business_id: member.businessId,
     p_service_id: body.serviceId,
