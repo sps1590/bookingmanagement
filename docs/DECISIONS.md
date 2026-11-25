@@ -261,3 +261,40 @@ blocked_range TSTZRANGE GENERATED ALWAYS AS (
 `shift_minutes(ts, mins)` narrows the operation to the case that genuinely is immutable: a whole number of minutes is a pure time offset with no calendar fields, so shifting an absolute instant by it gives the same answer in every zone and on both sides of a DST boundary. The `int` parameter is what keeps that true — there is no way to hand the function a month.
 
 So the IMMUTABLE label is accurate rather than a convenient lie. That distinction matters: a wrongly-labelled immutable function in an index expression produces corrupt indexes that return wrong rows, which here would mean a booking the constraint cannot see.
+
+---
+
+## D-018 — No phone OTP; layered limits instead
+
+**Date:** 2026-11-25 (Phase 3)
+**Status:** Accepted
+
+The plan asks for optional phone OTP before a public booking is inserted, and records defect N-02 against it: the spec names OTP and never says which provider, what expiry, or how many attempts.
+
+It is not being built, and the reason is the same finding that removed SMS reminders in D-009 and D-010. Every route to a one-time code on a phone costs money — there is no free tier for business-initiated SMS in this product's market — so adding OTP means adding the first paid dependency to a stack whose entire premise is that there is not one. A tenant on the free plan would be offered a toggle that cannot be switched on.
+
+What guards the public booking endpoint instead, in layers:
+
+- **Per IP**, 10 bookings an hour. Stops one machine scripting the form.
+- **Per phone number**, 5 an hour. Stops a distributed attempt converging on one number, and stops a frustrated customer double-submitting into four appointments.
+- **Per customer**, `max_active_per_customer` (default 3) open future bookings, enforced inside `create_booking_atomic`. Stops one person holding a tenant's week.
+- **Email confirmation**, which is weak proof of identity but is proof that someone reachable asked.
+
+The counters live in Postgres (`rate_limit_hits`, migration 0021) rather than Redis or Vercel KV, because the free stack contains no durable key-value store and a limiter held in a serverless function's memory resets on every cold start.
+
+What this does not stop: a determined person with many phone numbers and many IPs booking a clinic's whole week. The honest mitigation for that is `auto_confirm = false`, which the tenant already controls and which makes every booking a request someone approves. Revisit if a tenant is actually attacked, or if the platform ever takes a paid dependency for another reason — at which point OTP costs one more integration rather than a change of premise.
+
+---
+
+## D-019 — The booking flow is one route, not four
+
+**Date:** 2026-11-25 (Phase 3)
+**Status:** Accepted
+
+The plan's route table lists `/book/[slug]/[serviceId]`, `/book/[slug]/slots` and `/book/[slug]/confirm` as separate pages. They are steps on one route instead, with the choices in the query string.
+
+The reason is the plan's own constraint, two bullets below that table: most bookings arrive from phones on Bangladeshi mobile data, and the suite is meant to be tested on a throttled 3G profile. Four server round trips to choose one appointment is several seconds of staring at a blank screen, repeated at every step, and the measurable consequence is people leaving partway.
+
+What is kept from the multi-page design: the landing page is still server-rendered for SEO and first paint, the choices are still in the URL so a link is shareable and the back button works, and the confirmation is still its own route — `/book/[slug]/success/[code]` — because it is a page people return to and screenshot.
+
+The cost is that the flow is a client component, so the slot grid needs JavaScript. For a booking form that also needs it for the live availability refresh, that is not a new requirement.
