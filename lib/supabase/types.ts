@@ -736,7 +736,42 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "current_business_ids":
+            "admin_reschedule_booking":
+{ Args: { "p_booking_id": string,"p_reason"?: string,"p_staff_id"?: string,"p_start_time": string }; Returns: {
+              "booking_id": string,"end_time": string,"staff_id": string,"start_time": string
+            }[]
+                           },
+"available_slots_for":
+{ Args: { "p_business_id": string,"p_date": string,"p_exclude_booking_id"?: string,"p_service_id": string,"p_staff_id": string }; Returns: {
+              "slot_end": string,"slot_start": string
+            }[]
+                           },
+"booking_error":
+{ Args: { "p_code": string,"p_detail": string }; Returns: undefined
+                           },
+"booking_rule_bool":
+{ Args: { "p_default": boolean,"p_key": string,"p_rules": Json }; Returns: boolean
+                           },
+"booking_rule_int":
+{ Args: { "p_default": number,"p_key": string,"p_rules": Json }; Returns: number
+                           },
+"booking_status_transition_allowed":
+{ Args: { "p_from": string,"p_to": string }; Returns: boolean
+                           },
+"busy_ranges":
+{ Args: { "p_business_id": string,"p_exclude_booking_id"?: string,"p_from": string,"p_staff_id": string,"p_to": string }; Returns: unknown
+                           },
+"cancel_booking_by_token":
+{ Args: { "p_reason"?: string,"p_token": string }; Returns: {
+              "booking_code": string,"booking_id": string,"status": string
+            }[]
+                           },
+"create_booking_atomic":
+{ Args: { "p_branch_id"?: string,"p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_notes"?: string,"p_customer_phone": string,"p_service_id": string,"p_source"?: string,"p_staff_id": string,"p_start_time": string }; Returns: {
+              "booking_code": string,"booking_id": string,"end_time": string,"reschedule_token": string,"staff_id": string,"start_time": string,"status": string
+            }[]
+                           },
+"current_business_ids":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
 "current_staff_id":
@@ -744,6 +779,16 @@ isOneToOne: false
                            },
 "generate_reschedule_token":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"get_available_slots":
+{ Args: { "p_business_id": string,"p_date": string,"p_service_id": string,"p_staff_id": string }; Returns: {
+              "slot_end": string,"slot_start": string
+            }[]
+                           },
+"get_available_slots_any":
+{ Args: { "p_branch_id"?: string,"p_business_id": string,"p_date": string,"p_service_id": string }; Returns: {
+              "slot_end": string,"slot_start": string,"staff_id": string
+            }[]
                            },
 "has_role":
 { Args: { "p_business_id": string,"p_roles": (string)[] }; Returns: boolean
@@ -757,10 +802,27 @@ isOneToOne: false
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"queue_booking_notifications":
+{ Args: { "p_booking_id": string }; Returns: number
+                           },
 "register_business":
 { Args: { "p_currency": string,"p_email": string,"p_industry": string,"p_name": string,"p_owner_user_id": string,"p_phone": string,"p_slug"?: string,"p_templates"?: Json,"p_terminology": Json,"p_timezone": string }; Returns: {
               "business_code": string,"business_id": string,"slug": string
             }[]
+                           },
+"render_template":
+{ Args: { "p_body": string,"p_vars": Json }; Returns: string
+                           },
+"reschedule_booking_by_token":
+{ Args: { "p_start_time": string,"p_token": string }; Returns: {
+              "booking_code": string,"booking_id": string,"end_time": string,"reschedule_token": string,"reschedules_left": number,"start_time": string
+            }[]
+                           },
+"resolved_duration_minutes":
+{ Args: { "p_service_id": string,"p_staff_id": string }; Returns: number
+                           },
+"set_booking_status":
+{ Args: { "p_booking_id": string,"p_new_status": string,"p_reason"?: string }; Returns: string
                            },
 "shift_minutes":
 { Args: { "mins": number,"ts": string }; Returns: string
@@ -770,6 +832,9 @@ isOneToOne: false
                            },
 "timemultirange":
 { Args: Record<PropertyKey, never>; Returns: unknown
+                           },
+"working_windows":
+{ Args: { "p_business_id": string,"p_date": string,"p_staff_id": string }; Returns: unknown
                            }
           }
           Enums: {

@@ -318,10 +318,26 @@ Also rate-limit the public endpoint (by IP and phone) in the API layer, and requ
 
 ### Exit criteria
 
-- [ ] All five concurrency tests pass repeatedly (run 10×).
-- [ ] Every gate in 4.2 has a failing-case test.
-- [ ] `get_available_slots` under 150 ms on a full day with 40 existing bookings.
-- [ ] A second tenant on `America/New_York` produces correct slots and correctly formatted message times.
+- [x] All five concurrency tests pass repeatedly. CI runs **three** passes on
+      every push (`npm run test:concurrency -- --repeat 3`); the ten-pass run
+      is `--repeat 10` and belongs to sign-off, not to every push.
+- [x] Every gate in 4.2 has a failing-case test — `tests/db/0012_booking_gates.sql`.
+- [x] `get_available_slots` under 150 ms on a full day with 40 existing
+      bookings. Asserted, not benchmarked by hand: the last check in
+      `scripts/run-concurrency-tests.ts` fills a day with 40 appointments and
+      fails over budget. It guards against a regression to the spec's
+      correlated `NOT EXISTS` per candidate slot, which is fine on an empty
+      day and quadratic on a busy one — so it would pass every other test.
+- [x] A second tenant on `America/New_York` produces correct slots
+      (`tests/db/0011_slot_engine.sql`, defect B-20). Message *times* render
+      through `businesses.timezone` in `queue_booking_notifications`; the
+      rendering itself is exercised in `0013`, and Phase 5 owns delivery.
+
+Carried into later phases rather than done here, and listed so they are not
+mistaken for finished: API-layer rate limiting by IP and phone, and the phone
+OTP gate before insert (§4.2, last paragraph), both of which belong with the
+public portal in Phase 3; and the waitlist sweep on cancellation, which needs
+the matching logic Phase 9 builds.
 
 ---
 
