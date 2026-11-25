@@ -23,6 +23,20 @@ WHERE EXTRACT(DOW FROM d) BETWEEN 0 AND 4
 ORDER BY d
 LIMIT 1;
 
+-- The fixture gives weekly hours to Dr Rahman only, and several blocks below
+-- need a second provider who is free at the same times — otherwise they fail
+-- on availability before reaching the gate they are about to test.
+INSERT INTO availability_rules (business_id, staff_id, day_of_week, start_time, end_time, is_break)
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f2-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '10:00', TIME '18:00', FALSE
+FROM generate_series(0, 4) AS d
+UNION ALL
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f2-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '13:00', TIME '14:00', TRUE
+FROM generate_series(0, 4) AS d;
+
 CREATE TEMP TABLE slot AS
 SELECT min(slot_start) AS at
 FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',

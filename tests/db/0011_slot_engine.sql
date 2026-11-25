@@ -18,23 +18,42 @@
 -- anything the moment that date drifts outside the window.
 -- ---------------------------------------------------------------------------
 
--- A working day far enough ahead to clear min_lead_minutes, and a Sunday-to-
--- Thursday one so the weekly rules apply.
+-- Two working days far enough ahead to clear min_lead_minutes, and
+-- Sunday-to-Thursday ones so the weekly rules apply. Two, because the closure
+-- test below has to shut the clinic on a date, and doing that on the day every
+-- other assertion uses would make each test depend on its position in the
+-- file.
 CREATE TEMP TABLE probe AS
-SELECT d::date AS work_day
+SELECT d::date AS work_day,
+       row_number() OVER (ORDER BY d) AS n
 FROM generate_series(
          (NOW() AT TIME ZONE 'Asia/Dhaka')::date + 3,
          (NOW() AT TIME ZONE 'Asia/Dhaka')::date + 12,
          INTERVAL '1 day') AS d
 WHERE EXTRACT(DOW FROM d) BETWEEN 0 AND 4
 ORDER BY d
-LIMIT 1;
+LIMIT 2;
+
+-- The fixture gives weekly hours to Dr Rahman only. Dr Chowdhury is mapped to
+-- the same service, so "Any Available" should offer both — but a provider with
+-- no hours is correctly offered for nothing, and without this the B-14
+-- assertion would be measuring the fixture rather than the function.
+INSERT INTO availability_rules (business_id, staff_id, day_of_week, start_time, end_time, is_break)
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f2-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '10:00', TIME '18:00', FALSE
+FROM generate_series(0, 4) AS d
+UNION ALL
+SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f2-0000-4000-8000-000000000001'::uuid,
+       d::smallint, TIME '13:00', TIME '14:00', TRUE
+FROM generate_series(0, 4) AS d;
 
 -- 1. A clear working day yields exactly the 22 slots the arithmetic predicts,
 --    the first at 10:00 and the last at 17:00 local.
 DO $$
 DECLARE
-    v_day   DATE := (SELECT work_day FROM probe);
+    v_day   DATE := (SELECT work_day FROM probe WHERE n = 1);
     v_count INT;
     v_first TEXT;
     v_last  TEXT;
@@ -61,7 +80,7 @@ $$;
 --    hour the provider is not there.
 DO $$
 DECLARE
-    v_day DATE := (SELECT work_day FROM probe);
+    v_day DATE := (SELECT work_day FROM probe WHERE n = 1);
     v_bad INT;
 BEGIN
     SELECT count(*) INTO v_bad
@@ -83,7 +102,7 @@ $$;
 --    slots at all — otherwise a hygienist is bookable for a root canal.
 DO $$
 DECLARE
-    v_day     DATE := (SELECT work_day FROM probe);
+    v_day     DATE := (SELECT work_day FROM probe WHERE n = 1);
     v_service UUID;
     v_count   INT;
 BEGIN
@@ -132,6 +151,7 @@ DO $$
 DECLARE
     v_today   DATE := (NOW() AT TIME ZONE 'Asia/Dhaka')::date;
     v_staff   UUID;
+    v_service UUID;
     v_dow     SMALLINT := EXTRACT(DOW FROM (NOW() AT TIME ZONE 'Asia/Dhaka'))::smallint;
     v_too_soon INT;
 BEGIN
@@ -140,9 +160,16 @@ BEGIN
             'aaaa00b1-0000-4000-8000-000000000001', 'Dr Always-On')
     RETURNING id INTO v_staff;
 
+    -- A service of their own rather than the shared Root Canal. Today's
+    -- weekday can coincide with the probe day's, and this provider would then
+    -- turn up in the "Any Available" count below and make it depend on which
+    -- day of the week the suite happens to run.
+    INSERT INTO services (business_id, name, duration_minutes, price)
+    VALUES ('aaaa0000-0000-4000-8000-000000000001', 'Emergency Visit', 30, 1500)
+    RETURNING id INTO v_service;
+
     INSERT INTO staff_services (business_id, staff_id, service_id)
-    VALUES ('aaaa0000-0000-4000-8000-000000000001', v_staff,
-            'aaaa00e1-0000-4000-8000-000000000001');
+    VALUES ('aaaa0000-0000-4000-8000-000000000001', v_staff, v_service);
 
     -- Open round the clock today, so the only thing that can exclude a slot
     -- is the lead time.
@@ -153,8 +180,7 @@ BEGIN
 
     SELECT count(*) INTO v_too_soon
     FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',
-                             'aaaa00e1-0000-4000-8000-000000000001',
-                             v_staff, v_today)
+                             v_service, v_staff, v_today)
     WHERE slot_start < NOW() + INTERVAL '60 minutes';
 
     IF v_too_soon > 0 THEN
@@ -207,7 +233,9 @@ $$;
 --    "nothing available" rather than why.
 DO $$
 DECLARE
-    v_day   DATE := (SELECT work_day FROM probe);
+    -- The SECOND working day: shutting the clinic on the day the other
+    -- assertions use would silently turn them into tests of this one.
+    v_day   DATE := (SELECT work_day FROM probe WHERE n = 2);
     v_count INT;
 BEGIN
     INSERT INTO availability_overrides
@@ -233,7 +261,7 @@ $$;
 --    provider — and never with the unmapped Dr Always-On.
 DO $$
 DECLARE
-    v_day      DATE := (SELECT work_day FROM probe);
+    v_day      DATE := (SELECT work_day FROM probe WHERE n = 1);
     v_rows     INT;
     v_staff    INT;
     v_unmapped INT;
@@ -267,7 +295,7 @@ $$;
 --    a way around it.
 DO $$
 DECLARE
-    v_day   DATE := (SELECT work_day FROM probe);
+    v_day   DATE := (SELECT work_day FROM probe WHERE n = 1);
     v_count INT;
 BEGIN
     UPDATE businesses
