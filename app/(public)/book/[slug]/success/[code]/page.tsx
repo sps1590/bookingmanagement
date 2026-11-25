@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import QRCode from "qrcode";
+
 import { clientEnv } from "@/lib/env";
 import { loadPublicTenant } from "@/lib/public/tenant";
 import { resolveTerminology } from "@/lib/terminology";
+
+import { CalendarLinks } from "./calendar-links";
 
 /**
  * Confirmation.
@@ -35,10 +39,10 @@ export default async function BookingSuccessPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; code: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; s?: string; e?: string }>;
 }) {
   const { slug, code } = await params;
-  const { t: token } = await searchParams;
+  const { t: token, s: startIso, e: endIso } = await searchParams;
 
   const loaded = await loadPublicTenant(slug);
   if (!loaded) notFound();
@@ -46,6 +50,31 @@ export default async function BookingSuccessPage({
   const { business } = loaded;
   const terms = resolveTerminology(business.terminology_config, business.business_type);
   const manageUrl = token ? `${clientEnv.NEXT_PUBLIC_APP_URL}/manage/${token}` : null;
+
+  // The QR encodes the booking code, not the manage link. Reception scans it
+  // to find the appointment; the manage link is the customer's credential for
+  // changing it, and a code held up at a desk is photographed by whoever is
+  // behind them in the queue.
+  const qr = await QRCode.toString(code, {
+    type: "svg",
+    margin: 1,
+    errorCorrectionLevel: "M",
+  });
+
+  const start = startIso ? new Date(startIso) : null;
+  const end = endIso ? new Date(endIso) : null;
+  const haveTimes = start && end && !Number.isNaN(start.valueOf()) && !Number.isNaN(end.valueOf());
+
+  const when = haveTimes
+    ? new Intl.DateTimeFormat("en-GB", {
+        timeZone: business.timezone,
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(start)
+    : null;
 
   return (
     <main className="mx-auto max-w-lg px-6 py-16">
@@ -58,7 +87,35 @@ export default async function BookingSuccessPage({
         <p className="text-xs tracking-wide text-neutral-500 uppercase">Booking code</p>
         <p className="mt-1 font-mono text-3xl font-semibold tracking-widest">{code}</p>
         <p className="mt-2 text-xs text-neutral-500">Show this at reception.</p>
+
+        <div
+          aria-hidden="true"
+          className="mx-auto mt-5 w-40 [&>svg]:h-auto [&>svg]:w-full"
+          dangerouslySetInnerHTML={{ __html: qr }}
+        />
       </div>
+
+      {when ? (
+        <p className="mt-6 text-center text-sm">
+          <span className="font-medium">{when}</span>
+          <span className="block text-xs text-neutral-500">{business.timezone}</span>
+        </p>
+      ) : null}
+
+      {haveTimes ? (
+        <CalendarLinks
+          event={{
+            uid: `${code}@${business.slug}`,
+            start,
+            end,
+            title: `${terms.booking} — ${business.name}`,
+            description: `Booking code ${code}.${manageUrl ? ` Manage: ${manageUrl}` : ""}`,
+            location: business.address ?? undefined,
+            url: manageUrl ?? undefined,
+          }}
+          fileName={`${business.slug}-${code}.ics`}
+        />
+      ) : null}
 
       {manageUrl ? (
         <section className="mt-8">

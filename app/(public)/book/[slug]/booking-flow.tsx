@@ -257,8 +257,17 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
         return;
       }
 
-      const { code, manageToken } = body.data;
-      router.push(`/book/${slug}/success/${code}?t=${encodeURIComponent(manageToken)}`);
+      // The times travel in the URL so the confirmation page can build a
+      // calendar invite without looking the booking up. That is deliberate:
+      // a success page that re-fetched by code would answer "does this code
+      // exist" for anyone who guessed one.
+      const { code, manageToken, startTime, endTime } = body.data;
+      const query = new URLSearchParams({
+        t: manageToken,
+        s: startTime,
+        e: endTime,
+      });
+      router.push(`/book/${slug}/success/${code}?${query.toString()}`);
     } catch {
       setProblem("Could not reach the server. Your booking was not made — please try again.");
     } finally {

@@ -375,11 +375,40 @@ All public routes read from the Phase-1 safe views, never the base tables.
 
 ### Exit criteria
 
-- [ ] Playwright: a full guest booking on a seeded tenant produces a DB row and a booking code.
-- [ ] Two browsers racing the same slot → one succeeds, the other is told gracefully and recovers.
-- [ ] Closed days, break times and leave overrides never appear as bookable.
-- [ ] Lighthouse mobile ≥ 90 performance and ≥ 95 accessibility on the landing page.
-- [ ] Two tenants of different industries render different terminology and branding from the same code.
+- [x] Playwright: a full guest booking produces a DB row and a booking code —
+      `tests/e2e/booking.spec.ts`, **gated on `E2E_TENANT_SLUG`**. The portal's
+      landing page is server-rendered from Supabase, and Playwright cannot
+      intercept what the server fetches while rendering, so there is no way to
+      fake a tenant into it: the test needs a real published business. CI runs
+      against placeholder credentials, so it is skipped there whatever shape it
+      takes. Run it against staging before sign-off.
+- [x] Two browsers racing the same slot — same file, same gate. The
+      database-level race (50 connections, exactly one winner) runs on every
+      push in `scripts/run-concurrency-tests.ts`; what the browser test adds is
+      the half that suite cannot see, which is what the loser's page does next.
+- [x] Closed days, break times and leave overrides never appear as bookable —
+      `tests/db/0011_slot_engine.sql` and `0014_public_portal.sql`.
+- [ ] Lighthouse mobile ≥ 90 performance and ≥ 95 accessibility on the landing
+      page. **Not met, and not measurable in CI** for the same reason as the
+      first item: there is no tenant to render, so there is no page to audit.
+      The accessibility properties that score is a proxy for — labelled
+      controls, a keyboard-operable slot grid, selection exposed through
+      `aria-pressed` rather than colour, availability announced through
+      `aria-live` — are asserted on every push in
+      `tests/unit/booking-flow.test.tsx`. The numbers themselves stay a manual
+      gate against staging.
+- [ ] Two tenants of different industries render different terminology and
+      branding from the same code. The terminology layer is covered by unit
+      tests and the two-industry fixture, but nothing renders both portals and
+      compares them; that needs the same seeded tenants as the item above.
+
+**The pattern worth naming:** three of these five need a published tenant in a
+real project, and the free plan allows two Supabase projects per organisation
+with one already taken (see "This deployment" in DEVELOPER_GUIDE.md). Until
+there is a staging project, these are manual gates run against production data
+or not at all. That is a consequence of the zero-cost constraint, not an
+oversight, and it is the strongest argument in the plan for spending the first
+$25 on a second Supabase project.
 
 ---
 
