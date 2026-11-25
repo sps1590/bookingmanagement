@@ -93,6 +93,18 @@ jobs:
       - name: Build schema from zero and run RLS suite
         run: npm run test:db:fresh
 
+      # Phase 2's exit gate. Separate from the suite above because it needs
+      # committed rows on several connections at once: two sessions can only
+      # race for a slot if both are really committing, and tests/db runs
+      # everything inside one transaction that is rolled back.
+      #
+      # Three passes rather than one: a race that is only sometimes lost is
+      # the failure mode here, and a single green pass proves very little.
+      # The plan's sign-off gate is ten; three is what CI pays for on every
+      # push.
+      - name: Concurrency suite
+        run: npm run test:concurrency -- --repeat 3
+
       - name: Check generated types are current
         run: |
           npx tsx scripts/gen-types.ts /tmp/types.ts
