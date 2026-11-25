@@ -143,6 +143,22 @@ export default async function BookingsPage({
           <Link href="/app" className="text-sm underline underline-offset-4">
             Dashboard
           </Link>
+          <Link
+            href={`/app/bookings/print${range ? `?date=${range.from}` : ""}`}
+            className="text-sm underline underline-offset-4"
+          >
+            Print day sheet
+          </Link>
+          {desk ? (
+            <a
+              href={`/api/v1/admin/bookings/export?format=xlsx${
+                range ? `&from=${range.from}&to=${range.to}` : ""
+              }${status ? `&status=${status}` : ""}`}
+              className="text-sm underline underline-offset-4"
+            >
+              Export
+            </a>
+          ) : null}
           {desk ? (
             <WalkIn
               services={services ?? []}

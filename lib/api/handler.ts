@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 
 import { logger } from "@/lib/logger";
@@ -15,9 +14,13 @@ import { fail, failFrom } from "./response";
  */
 export function route<Args extends unknown[]>(
   name: string,
-  handler: (request: Request, ...args: Args) => Promise<NextResponse>,
+  // `Response`, not `NextResponse`: the export endpoints return a file with
+  // its own content type and disposition, and wrapping those in a JSON
+  // envelope helper would mean either a second wrapper with no request id and
+  // no error handling, or a download that arrives as JSON.
+  handler: (request: Request, ...args: Args) => Promise<Response>,
 ) {
-  return async (request: Request, ...args: Args): Promise<NextResponse> => {
+  return async (request: Request, ...args: Args): Promise<Response> => {
     const requestId = request.headers.get("x-request-id") ?? randomUUID();
     const startedAt = Date.now();
 

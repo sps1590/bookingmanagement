@@ -833,6 +833,11 @@ isOneToOne: false
               "slot_end": string,"slot_start": string,"staff_id": string
             }[]
                            },
+"get_booking_by_token":
+{ Args: { "p_token": string }; Returns: {
+              "booking_code": string,"booking_id": string,"business_address": string,"business_name": string,"business_phone": string,"business_slug": string,"customer_name": string,"end_time": string,"max_reschedules": number,"min_cancel_hours": number,"min_reschedule_hours": number,"reschedule_count": number,"service_id": string,"service_name": string,"staff_id": string,"staff_name": string,"start_time": string,"status": string,"terminology": Json,"timezone": string
+            }[]
+                           },
 "get_desk_slots":
 { Args: { "p_business_id": string,"p_date": string,"p_service_id": string,"p_staff_id": string }; Returns: {
               "slot_end": string,"slot_start": string

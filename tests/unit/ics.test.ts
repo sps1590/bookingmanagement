@@ -71,11 +71,39 @@ describe("buildIcs", () => {
 
   it("omits optional fields rather than emitting empty ones", () => {
     const ics = buildIcs(base);
-    expect(ics).not.toContain("DESCRIPTION:");
-    expect(ics).not.toContain("LOCATION:");
+    // Scoped to the event body: the alarms below carry a DESCRIPTION of their
+    // own, which is what a phone shows on the reminder, and asserting against
+    // the whole file would make adding one look like a regression.
+    const body = ics.slice(0, ics.indexOf("BEGIN:VALARM"));
+    expect(body).not.toContain("DESCRIPTION:");
+    expect(body).not.toContain("LOCATION:");
     // No ORGANIZER: some clients read one as a meeting invitation and send
     // acceptances to an address the clinic may not monitor.
     expect(ics).not.toContain("ORGANIZER");
+  });
+
+  it("carries reminders, because without SMS they are the only ones", () => {
+    const ics = buildIcs(base);
+    // -24h and -1h, matching the two reminder rows the queue creates. A
+    // customer who gave us nothing but a phone number gets these and nothing
+    // else, and they cost nothing to deliver.
+    expect(ics).toContain("TRIGGER:-PT24H");
+    expect(ics).toContain("TRIGGER:-PT1H");
+    expect(ics.match(/BEGIN:VALARM/g)).toHaveLength(2);
+  });
+
+  it("withdraws the event on cancellation instead of adding another", () => {
+    const ics = buildIcs({ ...base, method: "CANCEL", sequence: 3 });
+
+    expect(ics).toContain("METHOD:CANCEL");
+    expect(ics).toContain("STATUS:CANCELLED");
+    // The UID is unchanged, which is what makes a client remove the entry it
+    // already has rather than file a second one beside it.
+    expect(ics).toContain(`UID:${base.uid}`);
+    expect(ics).toContain("SEQUENCE:3");
+    // No alarms on a cancellation: a client that kept them would remind
+    // somebody about an appointment that is not happening.
+    expect(ics).not.toContain("BEGIN:VALARM");
   });
 });
 
