@@ -10,10 +10,10 @@ export type Database = {
                   }
                   ComputedFields: never
                   Insert: {
-                    "decided_at"?: string | null,"decided_by"?: string | null,"requested_by"?: string | null,"status"?: string,"business_id": string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date": string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
+                    "business_id": string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date": string,"reason"?: string | null,"requested_by"?: string | null,"staff_id"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "decided_at"?: string | null,"decided_by"?: string | null,"requested_by"?: string | null,"status"?: string,"business_id"?: string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date"?: string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
+                    "business_id"?: string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date"?: string,"reason"?: string | null,"requested_by"?: string | null,"staff_id"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -22,6 +22,12 @@ export type Database = {
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "availability_overrides_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "availability_overrides_business_id_fkey"
       columns: ["business_id"]
@@ -64,6 +70,12 @@ isOneToOne: false
       foreignKeyName: "availability_rules_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "availability_rules_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     },{
@@ -102,6 +114,12 @@ isOneToOne: false
       foreignKeyName: "booking_code_counters_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "booking_code_counters_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -130,6 +148,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "booking_history_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "booking_history_business_id_fkey"
       columns: ["business_id"]
@@ -168,6 +192,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bookings_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "bookings_business_id_fkey"
       columns: ["business_id"]
@@ -228,6 +258,12 @@ isOneToOne: false
       foreignKeyName: "branches_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "branches_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -262,6 +298,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "business_members_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "business_members_business_id_fkey"
       columns: ["business_id"]
@@ -312,6 +354,44 @@ isOneToOne: false
       foreignKeyName: "customers_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "customers_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "public_businesses"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_daily_stats": {
+                  Row: {
+                    "business_id": string,"channel": string,"count": number,"day": string,"event_type": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "business_id": string,"channel": string,"count"?: number,"day": string,"event_type": string,"status": string
+                  }
+                  Update: {
+                    "business_id"?: string,"channel"?: string,"count"?: number,"day"?: string,"event_type"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_daily_stats_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "businesses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_daily_stats_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "notification_daily_stats_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -344,6 +424,12 @@ isOneToOne: false
       foreignKeyName: "notification_logs_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "notification_logs_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -366,6 +452,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_templates_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "notification_templates_business_id_fkey"
       columns: ["business_id"]
@@ -398,6 +490,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "payments_business_id_fkey"
       columns: ["business_id"]
@@ -438,6 +536,38 @@ isOneToOne: false
                     "action"?: string,"actor_user_id"?: string | null,"created_at"?: string,"detail"?: string | null,"id"?: string,"target_business_id"?: string | null
                   }
                   Relationships: [
+                    {
+      foreignKeyName: "platform_audit_target_business_id_fkey"
+      columns: ["target_business_id"]
+isOneToOne: false
+      referencedRelation: "businesses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "platform_audit_target_business_id_fkey"
+      columns: ["target_business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "platform_audit_target_business_id_fkey"
+      columns: ["target_business_id"]
+isOneToOne: false
+      referencedRelation: "public_businesses"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"platform_email_usage": {
+                  Row: {
+                    "month": string,"sent": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "month": string,"sent"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "month"?: string,"sent"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
                     
                   ]
                 },"platform_heartbeat": {
@@ -453,6 +583,44 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"business_id": string,"created_at": string,"customer_id": string | null,"endpoint": string,"id": string,"last_used_at": string | null,"p256dh": string,"user_agent": string | null,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"business_id": string,"created_at"?: string,"customer_id"?: string | null,"endpoint": string,"id"?: string,"last_used_at"?: string | null,"p256dh": string,"user_agent"?: string | null,"user_id"?: string | null
+                  }
+                  Update: {
+                    "auth"?: string,"business_id"?: string,"created_at"?: string,"customer_id"?: string | null,"endpoint"?: string,"id"?: string,"last_used_at"?: string | null,"p256dh"?: string,"user_agent"?: string | null,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscriptions_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "businesses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "push_subscriptions_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "push_subscriptions_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "public_businesses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "push_subscriptions_customer_same_business"
+      columns: ["business_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["business_id","id"]
+    }
                   ]
                 },"rate_limit_hits": {
                   Row: {
@@ -486,6 +654,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "services_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "services_business_id_fkey"
       columns: ["business_id"]
@@ -528,6 +702,12 @@ isOneToOne: false
       foreignKeyName: "staff_resources_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "staff_resources_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -550,6 +730,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "staff_services_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "staff_services_business_id_fkey"
       columns: ["business_id"]
@@ -600,6 +786,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "subscription_invoices_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "subscription_invoices_business_id_fkey"
       columns: ["business_id"]
@@ -656,6 +848,12 @@ isOneToOne: false
       foreignKeyName: "waitlist_entries_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "waitlist_entries_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     },{
@@ -687,7 +885,15 @@ isOneToOne: false
                 }
           }
           Views: {
-            "public_branches": {
+            "plan_usage": {
+                  Row: {
+                    "bookings_this_month": number | null,"branches_used": number | null,"business_id": string,"features": NonNullable<Json>,"max_branches": number,"max_monthly_bookings": number,"max_staff": number,"plan_code": string,"plan_expires_at": string | null,"plan_name": string,"staff_used": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"public_branches": {
                   Row: {
                     "address": string | null,"business_id": string,"id": string,"is_default": boolean,"map_url": string | null,"name": string,"phone": string | null
                   }
@@ -699,6 +905,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "businesses"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "branches_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
     },{
       foreignKeyName: "branches_business_id_fkey"
       columns: ["business_id"]
@@ -737,6 +949,12 @@ isOneToOne: false
       foreignKeyName: "services_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "services_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -769,6 +987,12 @@ isOneToOne: false
       foreignKeyName: "staff_resources_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
+      referencedRelation: "plan_usage"
+      referencedColumns: ["business_id"]
+    },{
+      foreignKeyName: "staff_resources_business_id_fkey"
+      columns: ["business_id"]
+isOneToOne: false
       referencedRelation: "public_businesses"
       referencedColumns: ["id"]
     }
@@ -794,14 +1018,6 @@ isOneToOne: false
 "available_slots_for":
 { Args: { "p_business_id": string,"p_date": string,"p_exclude_booking_id"?: string,"p_ignore_lead"?: boolean,"p_service_id": string,"p_staff_id": string }; Returns: {
               "slot_end": string,"slot_start": string
-            }[]
-                           },
-"claim_email_allowance":
-{ Args: { "p_limit": number }; Returns: boolean
-                           },
-"claim_notifications":
-{ Args: { "p_limit"?: number }; Returns: {
-              "attempts": number,"booking_id": string,"business_id": string,"channel": string,"event_type": string,"id": string,"max_attempts": number,"message_body": string,"recipient_contact": string,"recipient_type": string,"subject": string
             }[]
                            },
 "booking_error":
@@ -830,6 +1046,14 @@ isOneToOne: false
 "check_rate_limit":
 { Args: { "p_bucket": string,"p_limit": number,"p_window_seconds": number }; Returns: boolean
                            },
+"claim_email_allowance":
+{ Args: { "p_limit": number }; Returns: boolean
+                           },
+"claim_notifications":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,"booking_id": string,"business_id": string,"channel": string,"event_type": string,"id": string,"max_attempts": number,"message_body": string,"recipient_contact": string,"recipient_type": string,"subject": string
+            }[]
+                           },
 "complete_notification":
 { Args: { "p_error"?: string,"p_id": string,"p_ok": boolean,"p_provider"?: string,"p_provider_id"?: string }; Returns: string
                            },
@@ -844,11 +1068,14 @@ isOneToOne: false
 "current_staff_id":
 { Args: { "p_business_id": string }; Returns: string
                            },
-"generate_reschedule_token":
-{ Args: Record<PropertyKey, never>; Returns: string
+"expire_subscriptions":
+{ Args: { "p_grace_days"?: number }; Returns: number
                            },
 "expire_waitlist_offers":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"generate_reschedule_token":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "get_available_slots":
 { Args: { "p_business_id": string,"p_date": string,"p_service_id": string,"p_staff_id": string }; Returns: {
@@ -887,14 +1114,14 @@ isOneToOne: false
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"join_waitlist":
+{ Args: { "p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_phone": string,"p_desired_date": string,"p_note"?: string,"p_service_id": string,"p_staff_id"?: string }; Returns: string
+                           },
 "member_branch_id":
 { Args: { "p_business_id": string }; Returns: string
                            },
 "notify_waitlist_for_booking":
 { Args: { "p_booking_id": string }; Returns: string
-                           },
-"join_waitlist":
-{ Args: { "p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_phone": string,"p_desired_date": string,"p_note"?: string,"p_service_id": string,"p_staff_id"?: string }; Returns: string
                            },
 "plan_feature":
 { Args: { "p_business_id": string,"p_key": string }; Returns: boolean
@@ -904,9 +1131,6 @@ isOneToOne: false
                            },
 "prune_notification_logs":
 { Args: { "p_days"?: number }; Returns: number
-                           },
-"expire_subscriptions":
-{ Args: { "p_grace_days"?: number }; Returns: number
                            },
 "queue_booking_notifications":
 { Args: { "p_booking_id": string }; Returns: number
@@ -938,20 +1162,20 @@ isOneToOne: false
 "set_booking_status":
 { Args: { "p_booking_id": string,"p_new_status": string,"p_reason"?: string }; Returns: string
                            },
-"skip_notification":
-{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
-                           },
-"sweep_unverified_deposits":
-{ Args: { "p_hours"?: number }; Returns: number
-                           },
 "set_business_active":
 { Args: { "p_active": boolean,"p_business_id": string,"p_note"?: string }; Returns: boolean
                            },
 "shift_minutes":
 { Args: { "mins": number,"ts": string }; Returns: string
                            },
+"skip_notification":
+{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
+                           },
 "slugify":
 { Args: { "p_text": string }; Returns: string
+                           },
+"sweep_unverified_deposits":
+{ Args: { "p_hours"?: number }; Returns: number
                            },
 "timemultirange":
 { Args: Record<PropertyKey, never>; Returns: unknown
