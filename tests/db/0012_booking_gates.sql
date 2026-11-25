@@ -44,6 +44,12 @@ FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',
                          'aaaa00f1-0000-4000-8000-000000000001',
                          (SELECT work_day FROM probe));
 
+-- These are created by the connection's own role, which is a superuser. The
+-- blocks at the end of this file drop to `authenticated` to make a booking as
+-- a real member of the business would, and without this they cannot read the
+-- scratch tables that tell them which slot to ask for.
+GRANT SELECT ON probe, slot TO authenticated;
+
 -- 0. The happy path, so that every refusal below means something. A booking
 --    is created, the per-tenant daily code is assigned by the trigger, a
 --    token is minted, the buffers are snapshotted from the service, and the
@@ -358,6 +364,17 @@ $$;
 
 -- A booking taken at the front desk is confirmed whatever auto_confirm says:
 -- the person typing it is the person who would have approved it.
+--
+-- Run as a signed-in member, because that is what a desk booking is. Migration
+-- 0023 lets `walk_in` skip the customer's lead time, so it also checks the
+-- caller is actually at the desk — otherwise the public endpoint could pass
+-- the source and the gate would be decorative. Until this block set a JWT it
+-- ran as the connection's own superuser role, where `auth.uid()` is NULL and
+-- the business has no member to recognise.
+SET LOCAL "request.jwt.claims" =
+    '{"sub":"aaaa0001-0000-4000-8000-000000000001","role":"authenticated"}';
+SET LOCAL ROLE authenticated;
+
 DO $$
 DECLARE
     v_status TEXT;
