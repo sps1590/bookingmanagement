@@ -31,6 +31,19 @@ export interface CalendarEvent {
   url?: string;
   /** Bumped when the booking is rescheduled, so clients accept the change. */
   sequence?: number;
+  /**
+   * CANCEL withdraws the event from a calendar that already has it. Sending
+   * a cancellation as a fresh PUBLISH leaves the appointment sitting in the
+   * customer's calendar after they cancelled it, which is worse than never
+   * having sent one.
+   */
+  method?: "PUBLISH" | "CANCEL";
+  /**
+   * Minutes before the start to fire a reminder. Without SMS this is the only
+   * mechanism that reaches someone who gave us nothing but a phone number,
+   * and it costs nothing to operate.
+   */
+  alarms?: number[];
 }
 
 function stamp(date: Date): string {
@@ -77,12 +90,15 @@ function fold(line: string): string {
 }
 
 export function buildIcs(event: CalendarEvent): string {
+  const method = event.method ?? "PUBLISH";
+  const alarms = event.alarms ?? [24 * 60, 60];
+
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Booking Management//EN",
     "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+    `METHOD:${method}`,
     "BEGIN:VEVENT",
     `UID:${escapeText(event.uid)}`,
     `DTSTAMP:${stamp(new Date())}`,
@@ -93,7 +109,19 @@ export function buildIcs(event: CalendarEvent): string {
     ...(event.description ? [`DESCRIPTION:${escapeText(event.description)}`] : []),
     ...(event.location ? [`LOCATION:${escapeText(event.location)}`] : []),
     ...(event.url ? [`URL:${escapeText(event.url)}`] : []),
-    "STATUS:CONFIRMED",
+    `STATUS:${method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
+    // A cancellation carries no alarms: the point is to remove the entry, and
+    // a client that kept the alarms would remind someone about an appointment
+    // that is not happening.
+    ...(method === "CANCEL"
+      ? []
+      : alarms.flatMap((minutes) => [
+          "BEGIN:VALARM",
+          "ACTION:DISPLAY",
+          `TRIGGER:-PT${minutes >= 60 && minutes % 60 === 0 ? `${minutes / 60}H` : `${minutes}M`}`,
+          `DESCRIPTION:${escapeText(event.title)}`,
+          "END:VALARM",
+        ])),
     "END:VEVENT",
     "END:VCALENDAR",
   ];

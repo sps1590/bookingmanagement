@@ -772,6 +772,14 @@ isOneToOne: false
               "slot_end": string,"slot_start": string
             }[]
                            },
+"claim_email_allowance":
+{ Args: { "p_limit": number }; Returns: boolean
+                           },
+"claim_notifications":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,"booking_id": string,"business_id": string,"channel": string,"event_type": string,"id": string,"max_attempts": number,"message_body": string,"recipient_contact": string,"recipient_type": string,"subject": string
+            }[]
+                           },
 "booking_error":
 { Args: { "p_code": string,"p_detail": string }; Returns: undefined
                            },
@@ -797,6 +805,9 @@ isOneToOne: false
                            },
 "check_rate_limit":
 { Args: { "p_bucket": string,"p_limit": number,"p_window_seconds": number }; Returns: boolean
+                           },
+"complete_notification":
+{ Args: { "p_error"?: string,"p_id": string,"p_ok": boolean,"p_provider"?: string,"p_provider_id"?: string }; Returns: string
                            },
 "create_booking_atomic":
 { Args: { "p_branch_id"?: string,"p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_notes"?: string,"p_customer_phone": string,"p_service_id": string,"p_source"?: string,"p_staff_id": string,"p_start_time": string }; Returns: {
@@ -847,8 +858,14 @@ isOneToOne: false
 "member_branch_id":
 { Args: { "p_business_id": string }; Returns: string
                            },
+"prune_notification_logs":
+{ Args: { "p_days"?: number }; Returns: number
+                           },
 "queue_booking_notifications":
 { Args: { "p_booking_id": string }; Returns: number
+                           },
+"reap_stuck_notifications":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "register_business":
 { Args: { "p_currency": string,"p_email": string,"p_industry": string,"p_name": string,"p_owner_user_id": string,"p_phone": string,"p_slug"?: string,"p_templates"?: Json,"p_terminology": Json,"p_timezone": string }; Returns: {
@@ -868,6 +885,9 @@ isOneToOne: false
                            },
 "set_booking_status":
 { Args: { "p_booking_id": string,"p_new_status": string,"p_reason"?: string }; Returns: string
+                           },
+"skip_notification":
+{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
                            },
 "shift_minutes":
 { Args: { "mins": number,"ts": string }; Returns: string
