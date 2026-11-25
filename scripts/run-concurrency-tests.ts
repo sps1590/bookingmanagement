@@ -346,6 +346,78 @@ const CHECKS: Check[] = [
       return null;
     },
   },
+  {
+    // The plan's performance criterion: under 150 ms for a full day at
+    // 15-minute granularity with 40 existing bookings. Worth an assertion
+    // rather than a benchmark run once by hand, because the thing it guards
+    // against is a regression to the spec's correlated NOT EXISTS per
+    // candidate slot — which is fine on an empty day and quadratic on a busy
+    // one, so it would pass every other test here.
+    name: "a full day against 40 bookings answers in under 150 ms",
+    run: async (admin, world) => {
+      const staff = world.staff[4];
+
+      // A 15-minute service with no buffers, so 09:00-18:00 holds 36
+      // back-to-back appointments and the day is genuinely full.
+      const svc = (
+        await admin.query<{ id: string }>(
+          `INSERT INTO services (business_id, name, duration_minutes, price)
+           VALUES ($1, 'Quick Check', 15, 500) RETURNING id`,
+          [world.businessId],
+        )
+      ).rows[0].id;
+      await admin.query(
+        `INSERT INTO staff_services (business_id, staff_id, service_id) VALUES ($1, $2, $3)`,
+        [world.businessId, staff, svc],
+      );
+
+      // Its own customer rather than whichever one an earlier check happened
+      // to create, so this block does not depend on the order it runs in.
+      const customer = (
+        await admin.query<{ id: string }>(
+          `INSERT INTO customers (business_id, full_name, phone)
+           VALUES ($1, 'Load Fixture', '+8801999999999') RETURNING id`,
+          [world.businessId],
+        )
+      ).rows[0].id;
+
+      // Written directly: create_booking_atomic would refuse most of them for
+      // the abuse cap, and what is being measured is the read path.
+      await admin.query(
+        `INSERT INTO bookings (business_id, customer_id, service_id, staff_id,
+                               start_time, end_time, buffer_before_minutes, buffer_after_minutes)
+         SELECT $1, $5, $2, $3,
+                (($4::date + TIME '09:00') AT TIME ZONE 'Asia/Dhaka') + make_interval(mins => 15 * g),
+                (($4::date + TIME '09:00') AT TIME ZONE 'Asia/Dhaka') + make_interval(mins => 15 * g + 15),
+                0, 0
+         FROM generate_series(0, 39) g`,
+        [world.businessId, svc, staff, world.day, customer],
+      );
+
+      const timings: number[] = [];
+      for (let i = 0; i < 5; i += 1) {
+        const t0 = process.hrtime.bigint();
+        await admin.query(`SELECT * FROM get_available_slots($1, $2, $3, $4::date)`, [
+          world.businessId,
+          svc,
+          staff,
+          world.day,
+        ]);
+        timings.push(Number(process.hrtime.bigint() - t0) / 1e6);
+      }
+      timings.sort((a, b) => a - b);
+      const median = timings[2];
+
+      // Includes the client round trip, which on a local socket is under a
+      // millisecond. Reported either way, so a slow run is a number rather
+      // than a guess.
+      if (median > 150) {
+        return `median ${median.toFixed(1)} ms over 5 runs, against a 150 ms budget`;
+      }
+      process.stdout.write(`(${median.toFixed(1)} ms) `);
+      return null;
+    },
+  },
 ];
 
 async function main(): Promise<void> {
