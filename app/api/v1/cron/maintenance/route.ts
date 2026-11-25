@@ -1,7 +1,6 @@
 import { ApiError, ErrorCode } from "@/lib/api/errors";
 import { route } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
-import { serverEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -31,8 +30,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
+/**
+ * The shared secret, read straight from the environment.
+ *
+ * Deliberately not through `serverEnv()`: that validates the whole schema and
+ * throws if anything unrelated is missing, which turns an unauthenticated
+ * request into a 500 and tells a stranger that the deployment is
+ * misconfigured. An authorisation gate must not depend on configuration it
+ * does not use.
+ */
+function cronSecret(): string | undefined {
+  const value = process.env.CRON_SECRET;
+  return value && value.length > 0 ? value : undefined;
+}
+
 function authorise(request: Request): void {
-  const configured = serverEnv().CRON_SECRET;
+  const configured = cronSecret();
   if (!configured) {
     throw new ApiError(ErrorCode.FORBIDDEN, "The scheduler is not configured on this deployment.");
   }
