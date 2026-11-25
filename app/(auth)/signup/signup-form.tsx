@@ -190,7 +190,10 @@ export function SignupForm({ resume }: { resume: boolean }) {
       <Field
         label="Password"
         htmlFor="ownerPassword"
-        hint="At least 10 characters. This account can see every patient record you store."
+        // In the trade's own words, like every other label on this page. A
+        // salon owner reading "patient record" learns that this software was
+        // written for somebody else.
+        hint={`At least 10 characters. This account can see every ${labels.customer.toLowerCase()} record you store.`}
       >
         <input
           id="ownerPassword"
