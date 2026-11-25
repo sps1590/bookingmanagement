@@ -272,14 +272,14 @@ isOneToOne: false
                   ]
                 },"businesses": {
                   Row: {
-                    "address": string | null,"booking_rules": NonNullable<Json>,"branding_config": NonNullable<Json>,"business_code": string,"business_type": string,"created_at": string,"currency": string,"email": string | null,"id": string,"is_active": boolean,"name": string,"onboarding_completed_at": string | null,"onboarding_step": string,"phone": string,"plan_id": string | null,"slug": string,"terminology_config": NonNullable<Json>,"timezone": string,"updated_at": string
+                    "address": string | null,"booking_rules": NonNullable<Json>,"branding_config": NonNullable<Json>,"business_code": string,"business_type": string,"created_at": string,"currency": string,"email": string | null,"id": string,"is_active": boolean,"name": string,"onboarding_completed_at": string | null,"onboarding_step": string,"phone": string,"plan_expires_at": string | null,"plan_id": string | null,"slug": string,"terminology_config": NonNullable<Json>,"timezone": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "address"?: string | null,"booking_rules"?: NonNullable<Json>,"branding_config"?: NonNullable<Json>,"business_code"?: string,"business_type": string,"created_at"?: string,"currency"?: string,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"onboarding_completed_at"?: string | null,"onboarding_step"?: string,"phone": string,"plan_id"?: string | null,"slug": string,"terminology_config"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string
+                    "address"?: string | null,"booking_rules"?: NonNullable<Json>,"branding_config"?: NonNullable<Json>,"business_code"?: string,"business_type": string,"created_at"?: string,"currency"?: string,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"onboarding_completed_at"?: string | null,"onboarding_step"?: string,"phone": string,"plan_expires_at"?: string | null,"plan_id"?: string | null,"slug": string,"terminology_config"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "address"?: string | null,"booking_rules"?: NonNullable<Json>,"branding_config"?: NonNullable<Json>,"business_code"?: string,"business_type"?: string,"created_at"?: string,"currency"?: string,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"onboarding_completed_at"?: string | null,"onboarding_step"?: string,"phone"?: string,"plan_id"?: string | null,"slug"?: string,"terminology_config"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string
+                    "address"?: string | null,"booking_rules"?: NonNullable<Json>,"branding_config"?: NonNullable<Json>,"business_code"?: string,"business_type"?: string,"created_at"?: string,"currency"?: string,"email"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"onboarding_completed_at"?: string | null,"onboarding_step"?: string,"phone"?: string,"plan_expires_at"?: string | null,"plan_id"?: string | null,"slug"?: string,"terminology_config"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -422,6 +422,20 @@ isOneToOne: false
                   }
                   Update: {
                     "created_at"?: string,"granted_by"?: string | null,"note"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"platform_audit": {
+                  Row: {
+                    "action": string,"actor_user_id": string | null,"created_at": string,"detail": string | null,"id": string,"target_business_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_user_id"?: string | null,"created_at"?: string,"detail"?: string | null,"id"?: string,"target_business_id"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"actor_user_id"?: string | null,"created_at"?: string,"detail"?: string | null,"id"?: string,"target_business_id"?: string | null
                   }
                   Relationships: [
                     
@@ -767,6 +781,16 @@ isOneToOne: false
               "booking_id": string,"end_time": string,"staff_id": string,"start_time": string
             }[]
                            },
+"analytics_peak_hours":
+{ Args: { "p_business_id": string,"p_from": string,"p_to": string }; Returns: {
+              "bookings": number,"hour_of_day": number
+            }[]
+                           },
+"analytics_summary":
+{ Args: { "p_business_id": string,"p_from": string,"p_to": string }; Returns: {
+              "cancelled": number,"collected": number,"completed": number,"completion_rate": number,"distinct_customers": number,"estimated": number,"no_show_rate": number,"no_shows": number,"repeat_customers": number,"total_bookings": number
+            }[]
+                           },
 "available_slots_for":
 { Args: { "p_business_id": string,"p_date": string,"p_exclude_booking_id"?: string,"p_ignore_lead"?: boolean,"p_service_id": string,"p_staff_id": string }; Returns: {
               "slot_end": string,"slot_start": string
@@ -823,6 +847,9 @@ isOneToOne: false
 "generate_reschedule_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"expire_waitlist_offers":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "get_available_slots":
 { Args: { "p_business_id": string,"p_date": string,"p_service_id": string,"p_staff_id": string }; Returns: {
               "slot_end": string,"slot_start": string
@@ -862,6 +889,12 @@ isOneToOne: false
                            },
 "member_branch_id":
 { Args: { "p_business_id": string }; Returns: string
+                           },
+"notify_waitlist_for_booking":
+{ Args: { "p_booking_id": string }; Returns: string
+                           },
+"join_waitlist":
+{ Args: { "p_business_id": string,"p_customer_email"?: string,"p_customer_name": string,"p_customer_phone": string,"p_desired_date": string,"p_note"?: string,"p_service_id": string,"p_staff_id"?: string }; Returns: string
                            },
 "plan_feature":
 { Args: { "p_business_id": string,"p_key": string }; Returns: boolean
@@ -910,6 +943,9 @@ isOneToOne: false
                            },
 "sweep_unverified_deposits":
 { Args: { "p_hours"?: number }; Returns: number
+                           },
+"set_business_active":
+{ Args: { "p_active": boolean,"p_business_id": string,"p_note"?: string }; Returns: boolean
                            },
 "shift_minutes":
 { Args: { "mins": number,"ts": string }; Returns: string

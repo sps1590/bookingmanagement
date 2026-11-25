@@ -128,6 +128,9 @@ export default async function AppHome({
         <Link href="/app/customers" className="block underline">
           {t.customerPlural}
         </Link>
+        <Link href="/app/analytics" className="block underline">
+          Analytics
+        </Link>
         <Link href="/app/settings/services" className="block underline">
           Settings
         </Link>
