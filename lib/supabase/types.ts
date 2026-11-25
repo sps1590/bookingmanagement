@@ -428,6 +428,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"rate_limit_hits": {
+                  Row: {
+                    "bucket": string,"hits": number,"window_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bucket": string,"hits"?: number,"window_start": string
+                  }
+                  Update: {
+                    "bucket"?: string,"hits"?: number,"window_start"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"services": {
                   Row: {
                     "buffer_after_minutes": number,"buffer_before_minutes": number,"business_id": string,"category": string | null,"color_hex": string,"created_at": string,"deposit_required": number,"description": string | null,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"price": number,"sort_order": number,"updated_at": string
