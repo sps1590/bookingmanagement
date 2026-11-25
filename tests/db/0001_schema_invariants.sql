@@ -139,9 +139,15 @@ BEGIN
       -- clinic on the platform is one caller, not one caller per tenant.
       -- Keying it by business would reset the allowance at each new target,
       -- which is the opposite of what a limiter is for.
+      --
+      -- `platform_email_usage` is on it for the same kind of reason as
+      -- `rate_limit_hits`: the free email allowance it counts is 3,000 a month
+      -- across the whole platform, not per tenant. Keyed by business it would
+      -- let ten tenants each stay under a limit the platform has already
+      -- blown, which is a counter that does not count.
       AND c.relname NOT IN ('businesses', 'subscription_plans', 'platform_admins',
                             'platform_heartbeat', 'booking_code_counters',
-                            'rate_limit_hits')
+                            'rate_limit_hits', 'platform_email_usage')
       AND NOT EXISTS (
           SELECT 1 FROM pg_attribute a
           WHERE a.attrelid = c.oid AND a.attname = 'business_id' AND NOT a.attisdropped

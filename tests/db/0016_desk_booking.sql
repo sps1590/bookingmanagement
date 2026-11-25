@@ -12,17 +12,32 @@
 -- customer's courtesy window. It may not book someone into their lunch.
 -- ---------------------------------------------------------------------------
 
--- Dr Rahman works 10:00-18:00 Sunday to Thursday with a 13:00-14:00 break.
--- Give him today as well, whatever weekday today is, so "now" is inside his
--- working day no matter when the suite runs.
+-- A provider who is always open, for the lead-time assertions.
+--
+-- The first version of this file extended Dr Rahman's hours instead, which
+-- left the test depending on the clock: he works 10:00-18:00 Dhaka, and CI
+-- running at 18:47 local found nothing inside the lead time and failed for a
+-- reason that had nothing to do with the code. A test whose result depends on
+-- what time of day it runs is worse than no test, because it teaches people
+-- to re-run until it passes.
+--
+-- Dr Rahman is still used below for the break assertion, where his fixed
+-- 13:00-14:00 lunch is the point.
+INSERT INTO staff_resources (id, business_id, branch_id, name)
+VALUES ('aaaa00f9-0000-4000-8000-000000000001',
+        'aaaa0000-0000-4000-8000-000000000001',
+        'aaaa00b1-0000-4000-8000-000000000001', 'Dr Round-The-Clock');
+
+INSERT INTO staff_services (business_id, staff_id, service_id)
+VALUES ('aaaa0000-0000-4000-8000-000000000001',
+        'aaaa00f9-0000-4000-8000-000000000001',
+        'aaaa00e1-0000-4000-8000-000000000001');
+
 INSERT INTO availability_rules (business_id, staff_id, day_of_week, start_time, end_time, is_break)
 SELECT 'aaaa0000-0000-4000-8000-000000000001'::uuid,
-       'aaaa00f1-0000-4000-8000-000000000001'::uuid,
+       'aaaa00f9-0000-4000-8000-000000000001'::uuid,
        d::smallint, TIME '00:00', TIME '23:45', FALSE
-FROM generate_series(0, 6) AS d
-WHERE d NOT IN (SELECT day_of_week FROM availability_rules
-                WHERE staff_id = 'aaaa00f1-0000-4000-8000-000000000001'
-                  AND NOT is_break);
+FROM generate_series(0, 6) AS d;
 
 SET LOCAL "request.jwt.claims" =
     '{"sub":"aaaa0001-0000-4000-8000-000000000001","role":"authenticated"}';
@@ -39,13 +54,13 @@ BEGIN
     SELECT count(*) INTO v_public
     FROM get_available_slots('aaaa0000-0000-4000-8000-000000000001',
                              'aaaa00e1-0000-4000-8000-000000000001',
-                             'aaaa00f1-0000-4000-8000-000000000001', v_today)
+                             'aaaa00f9-0000-4000-8000-000000000001', v_today)
     WHERE slot_start < NOW() + INTERVAL '60 minutes';
 
     SELECT count(*) INTO v_desk
     FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
                         'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f1-0000-4000-8000-000000000001', v_today)
+                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
     WHERE slot_start < NOW() + INTERVAL '60 minutes';
 
     IF v_public <> 0 THEN
@@ -99,7 +114,7 @@ BEGIN
     SELECT slot_start INTO v_at
     FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
                         'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f1-0000-4000-8000-000000000001', v_today)
+                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
     WHERE slot_start < NOW() + INTERVAL '60 minutes'
     ORDER BY slot_start
     LIMIT 1;
@@ -112,7 +127,7 @@ BEGIN
     FROM create_booking_atomic(
         'aaaa0000-0000-4000-8000-000000000001',
         'aaaa00e1-0000-4000-8000-000000000001',
-        'aaaa00f1-0000-4000-8000-000000000001',
+        'aaaa00f9-0000-4000-8000-000000000001',
         v_at, 'Walk In Patient', '+8801911500001', NULL, NULL, NULL, 'walk_in');
 
     IF v_r.booking_id IS NULL THEN
@@ -137,7 +152,7 @@ BEGIN
     SELECT slot_start INTO v_at
     FROM get_desk_slots('aaaa0000-0000-4000-8000-000000000001',
                         'aaaa00e1-0000-4000-8000-000000000001',
-                        'aaaa00f1-0000-4000-8000-000000000001', v_today)
+                        'aaaa00f9-0000-4000-8000-000000000001', v_today)
     WHERE slot_start < NOW() + INTERVAL '45 minutes'
     ORDER BY slot_start DESC
     LIMIT 1;
@@ -150,7 +165,7 @@ BEGIN
         PERFORM * FROM create_booking_atomic(
             'aaaa0000-0000-4000-8000-000000000001',
             'aaaa00e1-0000-4000-8000-000000000001',
-            'aaaa00f1-0000-4000-8000-000000000001',
+            'aaaa00f9-0000-4000-8000-000000000001',
             v_at, 'Online Customer', '+8801911500002', NULL, NULL, NULL, 'online');
         v_msg := 'NO ERROR';
     EXCEPTION WHEN SQLSTATE 'BK001' THEN v_msg := SQLERRM;
@@ -179,7 +194,7 @@ BEGIN
         PERFORM * FROM create_booking_atomic(
             'aaaa0000-0000-4000-8000-000000000001',
             'aaaa00e1-0000-4000-8000-000000000001',
-            'aaaa00f1-0000-4000-8000-000000000001',
+            'aaaa00f9-0000-4000-8000-000000000001',
             NOW() + INTERVAL '10 minutes',
             'Pretend Desk', '+8801911500003', NULL, NULL, NULL, 'walk_in');
         v_msg := 'NO ERROR';
