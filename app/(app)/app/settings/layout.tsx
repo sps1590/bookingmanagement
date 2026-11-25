@@ -41,6 +41,9 @@ export default async function SettingsLayout({ children }: { children: React.Rea
           <Link href="/app/settings/hours" className="underline underline-offset-4">
             Opening hours
           </Link>
+          <Link href="/app/settings/leave" className="underline underline-offset-4">
+            Time off
+          </Link>
         </nav>
       ) : (
         <p className="mt-4 rounded-md border border-neutral-200 px-4 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">

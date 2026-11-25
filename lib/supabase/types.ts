@@ -6,14 +6,14 @@ export type Database = {
           Tables: {
             "availability_overrides": {
                   Row: {
-                    "business_id": string,"created_at": string,"custom_end_time": string | null,"custom_start_time": string | null,"id": string,"is_closed": boolean,"override_date": string,"reason": string | null,"staff_id": string | null,"updated_at": string
+                    "business_id": string,"created_at": string,"custom_end_time": string | null,"custom_start_time": string | null,"decided_at": string | null,"decided_by": string | null,"id": string,"is_closed": boolean,"override_date": string,"reason": string | null,"requested_by": string | null,"staff_id": string | null,"status": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "business_id": string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date": string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
+                    "decided_at"?: string | null,"decided_by"?: string | null,"requested_by"?: string | null,"status"?: string,"business_id": string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date": string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "business_id"?: string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date"?: string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
+                    "decided_at"?: string | null,"decided_by"?: string | null,"requested_by"?: string | null,"status"?: string,"business_id"?: string,"created_at"?: string,"custom_end_time"?: string | null,"custom_start_time"?: string | null,"id"?: string,"is_closed"?: boolean,"override_date"?: string,"reason"?: string | null,"staff_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -863,8 +863,17 @@ isOneToOne: false
 "member_branch_id":
 { Args: { "p_business_id": string }; Returns: string
                            },
+"plan_feature":
+{ Args: { "p_business_id": string,"p_key": string }; Returns: boolean
+                           },
+"plan_limit":
+{ Args: { "p_business_id": string,"p_key": string }; Returns: number
+                           },
 "prune_notification_logs":
 { Args: { "p_days"?: number }; Returns: number
+                           },
+"expire_subscriptions":
+{ Args: { "p_grace_days"?: number }; Returns: number
                            },
 "queue_booking_notifications":
 { Args: { "p_booking_id": string }; Returns: number
@@ -888,11 +897,19 @@ isOneToOne: false
 "resolved_duration_minutes":
 { Args: { "p_service_id": string,"p_staff_id": string }; Returns: number
                            },
+"revenue_summary":
+{ Args: { "p_business_id": string,"p_from": string,"p_to": string }; Returns: {
+              "bookings": number,"collected": number,"outstanding": number
+            }[]
+                           },
 "set_booking_status":
 { Args: { "p_booking_id": string,"p_new_status": string,"p_reason"?: string }; Returns: string
                            },
 "skip_notification":
 { Args: { "p_id": string,"p_reason": string }; Returns: undefined
+                           },
+"sweep_unverified_deposits":
+{ Args: { "p_hours"?: number }; Returns: number
                            },
 "shift_minutes":
 { Args: { "mins": number,"ts": string }; Returns: string
