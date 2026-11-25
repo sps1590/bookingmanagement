@@ -1143,6 +1143,11 @@ isOneToOne: false
               "business_code": string,"business_id": string,"slug": string
             }[]
                            },
+"register_my_business":
+{ Args: { "p_currency": string,"p_email": string,"p_industry": string,"p_name": string,"p_phone": string,"p_slug"?: string,"p_templates"?: Json,"p_terminology": Json,"p_timezone": string }; Returns: {
+              "business_code": string,"business_id": string,"slug": string
+            }[]
+                           },
 "render_template":
 { Args: { "p_body": string,"p_vars": Json }; Returns: string
                            },

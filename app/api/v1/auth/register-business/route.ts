@@ -6,7 +6,7 @@ import { created } from "@/lib/api/response";
 import { logger } from "@/lib/logger";
 import { defaultTemplates } from "@/lib/notify/default-templates";
 import { callingCodeForTimezone, normalisePhone, PhoneFormatError } from "@/lib/phone";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import { industrySchema, terminologyConfigFor, terminologyFor } from "@/lib/terminology";
 
@@ -22,18 +22,32 @@ const asJson = <T>(value: T): Json => value as unknown as Json;
 /**
  * POST /api/v1/auth/register-business — tenant signup (plan §3.3).
  *
- * One of the four sanctioned callers of the service-role client: at this point
- * there is no session and no membership row, so there is no RLS identity to
- * act as. Everything it writes goes through `register_business`, which does
- * the five inserts in one transaction (see migration 0017) — a half-created
- * tenant occupies its slug, has no owner, and cannot be retried by the person
- * who just signed up.
+ * This route used to hold the service-role key: it created the Auth identity
+ * with the admin API and wrote the tenant as a role that bypasses Row-Level
+ * Security. It no longer touches that key, and the reason is worth keeping.
  *
- * The one thing that cannot be inside that transaction is the Auth identity:
- * only the Auth service can hash a password. So it is created first, and
- * deleted again if the transaction fails. That compensating delete is the
- * weakest point in the flow and is logged loudly when it does not work,
- * because the residue is an account that can sign in and owns nothing.
+ * A service key is one long string in a hosting provider's settings. When it
+ * is wrong — truncated on paste, a trailing newline, copied from a different
+ * project — Supabase answers "Invalid API key", and the only thing that
+ * breaks is the ability to sign up. Every public page keeps working, so the
+ * deployment looks healthy while the front door is welded shut. That is a
+ * great deal of blast radius for a step that never needed the privilege:
+ * signup is somebody creating their own account and their own business.
+ *
+ * So both halves now run with the publishable key:
+ *
+ *   1. `auth.signUp` creates the identity. The Auth service hashes the
+ *      password exactly as the admin call did, and hands back a session.
+ *   2. `register_my_business` (migration 0028) writes the five tables in one
+ *      transaction as that session. It reads `auth.uid()` itself, so this
+ *      route cannot name an owner, and `anon` has no EXECUTE on it.
+ *
+ * The compensating delete is gone with the admin client, so a failure between
+ * the two steps leaves an account that owns nothing. That state was always
+ * reachable — the old delete could fail too — and both the signup page and
+ * the retry path below recover from it: sign in with the same credentials and
+ * finish the transaction. An orphaned account is recoverable. A tenant nobody
+ * owns is not, and that is still inside the transaction.
  */
 
 const bodySchema = z.object({
@@ -63,9 +77,12 @@ const bodySchema = z.object({
     .optional(),
 });
 
+/** Supabase reports a taken address with a message, not a typed code. */
+const TAKEN = /already (been )?registered|already exists|user already/i;
+
 export const POST = route("auth.register-business", async (request) => {
   const body = await parseBody(request, bodySchema);
-  const admin = createAdminClient();
+  const supabase = await createClient();
 
   // Read the number against the tenant's own dialling plan, so a New York
   // salon typing (212) 555-0002 is not stored as a Bangladeshi number.
@@ -80,43 +97,63 @@ export const POST = route("auth.register-business", async (request) => {
   }
 
   // 1. The Auth identity.
-  const createdUser = await admin.auth.admin.createUser({
+  const signUp = await supabase.auth.signUp({
     email: body.ownerEmail,
     password: body.ownerPassword,
-    email_confirm: true,
-    user_metadata: {
-      full_name: body.ownerName ?? null,
-      // Marks this identity as a tenant owner for later self-service flows.
-      signup_source: "register-business",
+    options: {
+      data: {
+        full_name: body.ownerName ?? null,
+        // Marks this identity as a tenant owner for later self-service flows.
+        signup_source: "register-business",
+      },
     },
   });
 
-  if (createdUser.error || !createdUser.data.user) {
-    const message = createdUser.error?.message ?? "Could not create the account.";
+  let hasSession = Boolean(signUp.data.session);
 
-    // Supabase reports an existing address with a 422 and a message rather
-    // than a typed code. Tell the person their email is taken instead of
-    // showing them an internal error — but say nothing about whether that
-    // account owns a business, which would confirm an address to a stranger.
-    if (/already (been )?registered|already exists/i.test(message)) {
+  if (signUp.error) {
+    const message = signUp.error.message;
+
+    if (!TAKEN.test(message)) {
+      logger.error("signup.auth_user_failed", { error: message });
+      throw new ApiError(ErrorCode.INTERNAL, "Could not create the account. Please try again.");
+    }
+
+    // The address is taken. Either this is somebody else's account, or it is
+    // this person finishing a signup that failed after the identity existed.
+    // The password tells the two apart, and only one of them can sign in.
+    const signIn = await supabase.auth.signInWithPassword({
+      email: body.ownerEmail,
+      password: body.ownerPassword,
+    });
+
+    if (signIn.error || !signIn.data.session) {
       throw new ApiError(
         ErrorCode.ALREADY_REGISTERED,
         "An account with that email address already exists. Sign in instead, or use a different address.",
       );
     }
 
-    logger.error("signup.auth_user_failed", { error: message });
-    throw new ApiError(ErrorCode.INTERNAL, "Could not create the account. Please try again.");
+    hasSession = true;
+    logger.info("signup.resumed", { reason: "the identity already existed" });
   }
 
-  const userId = createdUser.data.user.id;
+  // Supabase withholds the session until the address is confirmed when
+  // "Confirm email" is on for the project. Nothing is wrong with the request,
+  // but the transaction below needs an identity to run as, so it must wait
+  // for the link.
+  if (!hasSession) {
+    throw new ApiError(
+      ErrorCode.EMAIL_CONFIRMATION_PENDING,
+      "Your account was created. Confirm your email address from the message just sent, then sign in to finish setting up the business.",
+    );
+  }
 
-  // 2. Everything else, in one transaction.
+  // 2. Everything else, in one transaction, as the owner themselves.
   const terminology = terminologyFor(body.industry);
 
-  const { data, error } = await admin
-    .rpc("register_business", {
-      p_owner_user_id: userId,
+  const { data, error } = await supabase
+    .rpc("register_my_business", {
       p_name: body.businessName,
       p_industry: body.industry,
       p_phone: phone,
@@ -130,17 +167,6 @@ export const POST = route("auth.register-business", async (request) => {
     .single();
 
   if (error || !data) {
-    // Compensate: without this, the address is taken by an account that owns
-    // nothing, and the person cannot sign up again with it.
-    const cleanup = await admin.auth.admin.deleteUser(userId);
-    if (cleanup.error) {
-      logger.error("signup.orphaned_auth_user", {
-        userId,
-        rpcError: error?.message,
-        cleanupError: cleanup.error.message,
-      });
-    }
-
     if (error?.code === "23505" || /already owns a business/i.test(error?.message ?? "")) {
       throw new ApiError(ErrorCode.ALREADY_REGISTERED, "That account already owns a business.");
     }
@@ -148,7 +174,7 @@ export const POST = route("auth.register-business", async (request) => {
     logger.error("signup.register_business_failed", { error: error?.message });
     throw new ApiError(
       ErrorCode.INTERNAL,
-      "Could not finish setting up the business. Nothing was saved — please try again.",
+      "Your account was created, but the business was not. Sign in and try again — nothing was half-saved.",
     );
   }
 

@@ -11,7 +11,7 @@ secrets and switches that turn a working deployment into a running one.
 
 | What | Where | Without it |
 |---|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | Vercel → Environment Variables (Production) | Signing up a new business returns a 500. Everything else works. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Vercel → Environment Variables (Production) | The notification worker, the nightly jobs and the operator console stop. **Signup is no longer on this list**: migration 0028 moved it onto the publishable key, after a wrong value here closed the front door of a deployment whose every public page looked healthy. |
 | `CRON_SECRET` | Vercel, and as a GitHub repository secret | Reminders are queued and never sent; nightly housekeeping never runs. |
 | `APP_URL` | GitHub repository secret | Same — the scheduled workflows have nowhere to call. |
 | `SUPABASE_DB_URL` | GitHub repository secret | Keep-alive and backup fail on schedule. A free Supabase project pauses after **7 idle days**, and a paused project is an outage a tenant finds first. |

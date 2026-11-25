@@ -39,6 +39,12 @@ export const ErrorCode = {
   DUPLICATE_TRANSACTION_ID: "DUPLICATE_TRANSACTION_ID",
   /** Signup: this email, or this account's one business, already exists. */
   ALREADY_REGISTERED: "ALREADY_REGISTERED",
+  /**
+   * Signup: the identity was created but Supabase is withholding the session
+   * until the address is confirmed, so the business cannot be written yet.
+   * Only reachable when "Confirm email" is on for the project.
+   */
+  EMAIL_CONFIRMATION_PENDING: "EMAIL_CONFIRMATION_PENDING",
   PAYMENT_FAILED: "PAYMENT_FAILED",
 } as const;
 
@@ -62,6 +68,8 @@ const STATUS: Record<ErrorCode, number> = {
   INVALID_STATUS_TRANSITION: 422,
   DUPLICATE_TRANSACTION_ID: 409,
   ALREADY_REGISTERED: 409,
+  // Accepted, not finished: nothing is wrong with the request.
+  EMAIL_CONFIRMATION_PENDING: 202,
   PAYMENT_FAILED: 402,
 };
 
