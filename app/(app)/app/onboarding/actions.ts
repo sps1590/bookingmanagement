@@ -9,6 +9,8 @@ import { logger } from "@/lib/logger";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 
+import { TIMEZONES } from "./timezones";
+
 /**
  * Onboarding wizard steps (plan §3.3).
  *
@@ -29,25 +31,6 @@ export interface ActionState {
   error?: string;
   fieldErrors?: Record<string, string>;
 }
-
-const TIMEZONES = [
-  "Asia/Dhaka",
-  "Asia/Kolkata",
-  "Asia/Karachi",
-  "Asia/Kathmandu",
-  "Asia/Colombo",
-  "Asia/Dubai",
-  "Asia/Singapore",
-  "Asia/Kuala_Lumpur",
-  "Europe/London",
-  "America/New_York",
-  "America/Chicago",
-  "America/Los_Angeles",
-  "Australia/Sydney",
-  "UTC",
-] as const;
-
-export const SUPPORTED_TIMEZONES: readonly string[] = TIMEZONES;
 
 const detailsSchema = z.object({
   name: z.string().trim().min(2).max(150),

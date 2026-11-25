@@ -9,9 +9,9 @@ import {
   saveDetails,
   saveFirstService,
   saveWorkingHours,
-  SUPPORTED_TIMEZONES,
   type ActionState,
 } from "./actions";
+import { SUPPORTED_TIMEZONES } from "./timezones";
 
 const STEPS = [
   { id: "details", label: "Business details" },
