@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIn, zonedDayRange } from "@/lib/time/zone";
 
 import { StatusActions } from "./status-actions";
+import { WalkIn } from "./walk-in";
 
 export const metadata: Metadata = { title: "Bookings" };
 export const dynamic = "force-dynamic";
@@ -96,6 +97,30 @@ export default async function BookingsPage({
   const total = count ?? 0;
   const t = member.terminology;
 
+  const desk =
+    member.role === "owner" || member.role === "manager" || member.role === "receptionist";
+
+  const [{ data: services }, { data: staff }, { data: mappings }] = desk
+    ? await Promise.all([
+        supabase
+          .from("services")
+          .select("id, name")
+          .eq("business_id", member.businessId)
+          .eq("is_active", true)
+          .order("name"),
+        supabase
+          .from("staff_resources")
+          .select("id, name")
+          .eq("business_id", member.businessId)
+          .eq("is_active", true)
+          .order("name"),
+        supabase
+          .from("staff_services")
+          .select("staff_id, service_id")
+          .eq("business_id", member.businessId),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
   const time = new Intl.DateTimeFormat("en-GB", {
     timeZone: member.timezone,
     weekday: "short",
@@ -114,9 +139,20 @@ export default async function BookingsPage({
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t.bookingPlural}</h1>
-        <Link href="/app" className="text-sm underline underline-offset-4">
-          Dashboard
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/app" className="text-sm underline underline-offset-4">
+            Dashboard
+          </Link>
+          {desk ? (
+            <WalkIn
+              services={services ?? []}
+              staff={staff ?? []}
+              staffServices={(mappings ?? []).map((m) => `${m.staff_id}:${m.service_id}`)}
+              today={todayIn(member.timezone)}
+              timezone={member.timezone}
+            />
+          ) : null}
+        </div>
       </div>
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3">

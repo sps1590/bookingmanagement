@@ -768,7 +768,7 @@ isOneToOne: false
             }[]
                            },
 "available_slots_for":
-{ Args: { "p_business_id": string,"p_date": string,"p_exclude_booking_id"?: string,"p_service_id": string,"p_staff_id": string }; Returns: {
+{ Args: { "p_business_id": string,"p_date": string,"p_exclude_booking_id"?: string,"p_ignore_lead"?: boolean,"p_service_id": string,"p_staff_id": string }; Returns: {
               "slot_end": string,"slot_start": string
             }[]
                            },
@@ -820,6 +820,11 @@ isOneToOne: false
 "get_available_slots_any":
 { Args: { "p_branch_id"?: string,"p_business_id": string,"p_date": string,"p_service_id": string }; Returns: {
               "slot_end": string,"slot_start": string,"staff_id": string
+            }[]
+                           },
+"get_desk_slots":
+{ Args: { "p_business_id": string,"p_date": string,"p_service_id": string,"p_staff_id": string }; Returns: {
+              "slot_end": string,"slot_start": string
             }[]
                            },
 "get_month_availability":
