@@ -204,6 +204,36 @@ The shim can drift from real Supabase. It is kept narrow and faithful (`auth.uid
 
 ## 6. Deploying
 
+### This deployment
+
+The hosted environment this repository is wired to, recorded here so nobody has
+to guess which project a migration is about to hit:
+
+| | |
+|---|---|
+| Supabase project | `booking-management`, ref `aywfflosscqerxnxbhar`, region `ap-southeast-1` (Singapore), free plan |
+| Vercel project | `booking-management` under team `sps-a983`, Hobby |
+| Production URL | https://booking-management-mauve.vercel.app |
+| Git | `sps1590/bookingmanagement`; a push to `main` deploys to production |
+
+There is **no staging project**. The free Supabase plan allows two projects per
+organisation and one slot is already spoken for, so "staging first, then
+production" below is the shape to grow into, not what happens today — right now
+`npm run db:push` goes straight at the database customers use. Until a second
+project exists, treat `--dry` as mandatory rather than advisory.
+
+### Keys are the new format
+
+This project was created after Supabase replaced the anon/`service_role` JWTs
+with `sb_publishable_…` and `sb_secret_…`. Same database roles, same RLS
+behaviour, and our code takes either as an opaque string, so nothing in the
+codebase cares. Two things follow:
+
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` now holds a *publishable* key. The name is
+  kept for continuity with `lib/env.ts`; it is no longer literally the anon JWT.
+- The legacy keys are announced for retirement in early 2027. A project that
+  still issues them will need both rotated before then.
+
 ### Vercel
 
 1. Import the GitHub repository at [vercel.com/new](https://vercel.com/new). The framework is detected; no build settings to change.
