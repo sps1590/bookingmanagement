@@ -245,6 +245,18 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
+      foreignKeyName: "business_members_branch_same_business"
+      columns: ["business_id","branch_id"]
+isOneToOne: false
+      referencedRelation: "branches"
+      referencedColumns: ["business_id","id"]
+    },{
+      foreignKeyName: "business_members_branch_same_business"
+      columns: ["business_id","branch_id"]
+isOneToOne: false
+      referencedRelation: "public_branches"
+      referencedColumns: ["business_id","id"]
+    },{
       foreignKeyName: "business_members_business_id_fkey"
       columns: ["business_id"]
 isOneToOne: false
