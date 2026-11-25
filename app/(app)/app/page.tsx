@@ -119,8 +119,17 @@ export default async function AppHome({
       </section>
 
       <div className="mt-10 space-y-2 text-sm">
+        <Link href="/app/calendar" className="block underline">
+          Day calendar
+        </Link>
         <Link href="/app/bookings" className="block underline">
           {t.bookingPlural} and check-in
+        </Link>
+        <Link href="/app/customers" className="block underline">
+          {t.customerPlural}
+        </Link>
+        <Link href="/app/settings/services" className="block underline">
+          Settings
         </Link>
         <Link href="/app/onboarding" className="block underline">
           Review setup
