@@ -145,9 +145,16 @@ BEGIN
       -- across the whole platform, not per tenant. Keyed by business it would
       -- let ten tenants each stay under a limit the platform has already
       -- blown, which is a counter that does not count.
+      --
+      -- `platform_audit` records what a platform operator did. Its tenant
+      -- reference is `target_business_id`, nullable and ON DELETE SET NULL,
+      -- deliberately: the record of suspending a business has to outlive the
+      -- business. A `business_id` here would be deleted along with the thing
+      -- the entry exists to document.
       AND c.relname NOT IN ('businesses', 'subscription_plans', 'platform_admins',
                             'platform_heartbeat', 'booking_code_counters',
-                            'rate_limit_hits', 'platform_email_usage')
+                            'rate_limit_hits', 'platform_email_usage',
+                            'platform_audit')
       AND NOT EXISTS (
           SELECT 1 FROM pg_attribute a
           WHERE a.attrelid = c.oid AND a.attname = 'business_id' AND NOT a.attisdropped
