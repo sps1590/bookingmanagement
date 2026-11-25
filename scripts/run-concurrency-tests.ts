@@ -355,10 +355,30 @@ const CHECKS: Check[] = [
     // one, so it would pass every other test here.
     name: "a full day against 40 bookings answers in under 150 ms",
     run: async (admin, world) => {
-      const staff = world.staff[4];
+      // A provider of its own. Every other check books against world.staff,
+      // and the property check above spreads 400 attempts across all of them,
+      // so reusing one would collide with whatever that left behind — which
+      // is exactly what happened the first time this check ran.
+      const staff = (
+        await admin.query<{ id: string }>(
+          `INSERT INTO staff_resources (business_id, name)
+           VALUES ($1, 'Load Provider') RETURNING id`,
+          [world.businessId],
+        )
+      ).rows[0].id;
 
-      // A 15-minute service with no buffers, so 09:00-18:00 holds 36
-      // back-to-back appointments and the day is genuinely full.
+      // 09:00-20:00 so all 40 appointments sit inside the working day and the
+      // generator really is walking a full one.
+      await admin.query(
+        `INSERT INTO availability_rules
+             (business_id, staff_id, day_of_week, start_time, end_time, is_break)
+         SELECT $1, $2, d::smallint, TIME '09:00', TIME '20:00', FALSE
+         FROM generate_series(0, 6) d`,
+        [world.businessId, staff],
+      );
+
+      // A 15-minute service with no buffers, so the day holds 40 back-to-back
+      // appointments and 44 candidate slots.
       const svc = (
         await admin.query<{ id: string }>(
           `INSERT INTO services (business_id, name, duration_minutes, price)
