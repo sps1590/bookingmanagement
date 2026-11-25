@@ -234,14 +234,14 @@ isOneToOne: false
                   ]
                 },"business_members": {
                   Row: {
-                    "business_id": string,"created_at": string,"id": string,"invited_by": string | null,"is_active": boolean,"role": string,"updated_at": string,"user_id": string
+                    "branch_id": string | null,"business_id": string,"created_at": string,"id": string,"invited_by": string | null,"is_active": boolean,"role": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "business_id": string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"is_active"?: boolean,"role": string,"updated_at"?: string,"user_id": string
+                    "branch_id"?: string | null,"business_id": string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"is_active"?: boolean,"role": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "business_id"?: string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"is_active"?: boolean,"role"?: string,"updated_at"?: string,"user_id"?: string
+                    "branch_id"?: string | null,"business_id"?: string,"created_at"?: string,"id"?: string,"invited_by"?: string | null,"is_active"?: boolean,"role"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -772,6 +772,9 @@ isOneToOne: false
 "booking_status_transition_allowed":
 { Args: { "p_from": string,"p_to": string }; Returns: boolean
                            },
+"branch_in_scope":
+{ Args: { "p_branch_id": string,"p_business_id": string }; Returns: boolean
+                           },
 "busy_ranges":
 { Args: { "p_business_id": string,"p_exclude_booking_id"?: string,"p_from": string,"p_staff_id": string,"p_to": string }; Returns: unknown
                            },
@@ -823,6 +826,9 @@ isOneToOne: false
                            },
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"member_branch_id":
+{ Args: { "p_business_id": string }; Returns: string
                            },
 "queue_booking_notifications":
 { Args: { "p_booking_id": string }; Returns: number
