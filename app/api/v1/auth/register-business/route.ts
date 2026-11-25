@@ -96,11 +96,26 @@ export const POST = route("auth.register-business", async (request) => {
     throw error;
   }
 
+  // 0. Already signed in and finishing an interrupted signup. The identity
+  //    exists and is confirmed; asking Auth to create it again would only
+  //    produce "already registered" and a needless round trip.
+  const {
+    data: { user: current },
+  } = await supabase.auth.getUser();
+
+  if (current?.email === body.ownerEmail) {
+    return await createBusinessFor(supabase, body, phone);
+  }
+
   // 1. The Auth identity.
   const signUp = await supabase.auth.signUp({
     email: body.ownerEmail,
     password: body.ownerPassword,
     options: {
+      // Taken from the request rather than from configuration, so a preview
+      // deployment confirms against itself instead of sending its testers to
+      // production. Supabase still has to allow the origin.
+      emailRedirectTo: new URL("/auth/confirm", new URL(request.url).origin).toString(),
       data: {
         full_name: body.ownerName ?? null,
         // Marks this identity as a tenant owner for later self-service flows.
@@ -150,6 +165,23 @@ export const POST = route("auth.register-business", async (request) => {
   }
 
   // 2. Everything else, in one transaction, as the owner themselves.
+  return await createBusinessFor(supabase, body, phone);
+});
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * The tenant itself, written as whoever is signed in on `supabase`.
+ *
+ * Separate from the handler because there are two ways to arrive here with a
+ * session — just created, or signed in already and finishing a signup that
+ * stopped halfway — and they must produce exactly the same tenant.
+ */
+async function createBusinessFor(
+  supabase: ServerClient,
+  body: z.infer<typeof bodySchema>,
+  phone: string,
+) {
   const terminology = terminologyFor(body.industry);
 
   const { data, error } = await supabase
@@ -192,4 +224,4 @@ export const POST = route("auth.register-business", async (request) => {
     nextStep: "details",
     terminology,
   });
-});
+}

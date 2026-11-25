@@ -7,9 +7,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; created?: string }>;
+  searchParams: Promise<{ next?: string; created?: string; confirm?: string }>;
 }) {
-  const { next, created } = await searchParams;
+  const { next, created, confirm } = await searchParams;
 
   return (
     <LoginForm
@@ -18,6 +18,9 @@ export default async function LoginPage({
       // signed-in user somewhere else entirely.
       next={next?.startsWith("/") && !next.startsWith("//") ? next : "/app"}
       justCreated={created === "1"}
+      // The confirmation link did not work: expired, already used, or opened
+      // in a different browser than the one that signed up.
+      confirmFailed={confirm === "failed"}
     />
   );
 }

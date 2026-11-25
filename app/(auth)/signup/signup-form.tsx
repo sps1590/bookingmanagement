@@ -24,6 +24,12 @@ export function SignupForm({ resume }: { resume: boolean }) {
   const [industry, setIndustry] = useState<Industry>("dentist");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Not an error. When the project requires a confirmed address, the account
+   * is created and the business waits for the link — showing that in red
+   * would tell somebody their signup failed when it did not.
+   */
+  const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const labels = terminologyFor(industry);
@@ -31,6 +37,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNotice(null);
     setFieldErrors({});
 
     const form = new FormData(event.currentTarget);
@@ -69,7 +76,11 @@ export function SignupForm({ resume }: { resume: boolean }) {
         | { success: false; error: { code: string; message: string } };
 
       if (!payload.success) {
-        setError(payload.error.message);
+        if (payload.error.code === "EMAIL_CONFIRMATION_PENDING") {
+          setNotice(payload.error.message);
+        } else {
+          setError(payload.error.message);
+        }
         return;
       }
 
@@ -114,6 +125,15 @@ export function SignupForm({ resume }: { resume: boolean }) {
           className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400"
         >
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p
+          role="status"
+          className="rounded-md bg-blue-500/10 px-3 py-2 text-sm text-blue-800 dark:text-blue-300"
+        >
+          {notice}
         </p>
       ) : null}
 

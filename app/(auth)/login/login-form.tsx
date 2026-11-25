@@ -5,7 +5,15 @@ import { useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm({ next, justCreated }: { next: string; justCreated: boolean }) {
+export function LoginForm({
+  next,
+  justCreated,
+  confirmFailed,
+}: {
+  next: string;
+  justCreated: boolean;
+  confirmFailed?: boolean;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +50,12 @@ export function LoginForm({ next, justCreated }: { next: string; justCreated: bo
         {justCreated ? (
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
             Your business is set up. Sign in to finish configuring it.
+          </p>
+        ) : null}
+        {confirmFailed ? (
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+            That confirmation link did not work — it may have expired, been used already, or been
+            opened in a different browser. Sign in below, or sign up again to get a new one.
           </p>
         ) : null}
       </div>

@@ -73,7 +73,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  // A signed-in visitor has no business on the forms that create a session —
+  // with one exception. `requireMember()` sends a signed-in account that owns
+  // nothing to /signup?resume=1 so it can finish an interrupted signup, and
+  // bouncing that back to /app is an infinite redirect between the two. The
+  // state is reachable whenever the identity is created and the business is
+  // not: a closed laptop, a failed transaction, or an address confirmed from
+  // an email after the fact.
+  const resuming = pathname === "/signup" && request.nextUrl.searchParams.get("resume") === "1";
+
+  if (user && !resuming && (pathname === "/login" || pathname === "/signup")) {
     const app = request.nextUrl.clone();
     app.pathname = "/app";
     app.search = "";
