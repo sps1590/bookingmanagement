@@ -39,6 +39,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
               { href: "/app/settings/staff", label: t.staffPlural },
               { href: "/app/settings/hours", label: "Opening hours" },
               { href: "/app/settings/leave", label: "Time off" },
+              { href: "/app/settings/rules", label: "Booking rules" },
             ]}
           />
           {children}

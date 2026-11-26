@@ -174,14 +174,25 @@ BEGIN
 END
 $$;
 
--- 5. Defect M-04. max_reschedules is 2 by default and the booking has used
---    one. A second is allowed, a third is not.
+-- 5. Defect M-04. The tenant allows two reschedules and the booking has
+--    used one. A second is allowed, a third is not.
+--
+--    The cap is set here rather than inherited from the column default.
+--    This file used to rely on that default being 2; migration 0030 raised
+--    it to 5 — because two was too mean for a real clinic — and the test
+--    failed while the behaviour it checks was untouched. A test of "the
+--    limit is enforced" should state the limit, and then it keeps working
+--    whatever the default becomes.
 DO $$
 DECLARE
     v_day DATE := (SELECT work_day FROM probe);
     v_tok TEXT;
     v_msg TEXT;
 BEGIN
+    UPDATE businesses
+    SET booking_rules = booking_rules || jsonb_build_object('max_reschedules', 2)
+    WHERE id = 'aaaa0000-0000-4000-8000-000000000001';
+
     SELECT reschedule_token INTO v_tok FROM bookings
     WHERE id = (SELECT booking_id FROM made);
 

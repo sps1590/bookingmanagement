@@ -372,3 +372,104 @@ export async function removeClosure(_prev: ActionState, formData: FormData): Pro
   revalidatePath("/app/settings/hours");
   return { ok: "Removed." };
 }
+
+// --- Booking rules ---------------------------------------------------------
+
+/**
+ * How far ahead people may book, how much notice you need, and how often a
+ * booking may be moved.
+ *
+ * These lived in a JSONB column with a DEFAULT and nothing to edit them, so
+ * every tenant ran on numbers chosen in migration 0003 — thirty days ahead,
+ * two reschedules, three future appointments per person. Reasonable guesses,
+ * and wrong for a dentist booking a six-month check-up or a physiotherapist
+ * running a course of six weekly sessions, who had no setting to point at
+ * when the booking page refused.
+ *
+ * The bounds below are sanity, not policy: 3,650 days is ten years, which is
+ * "no practical limit" said in a unit the database already understands, and
+ * the floors stop a typo from closing the booking page altogether. The
+ * database still enforces whatever is stored here — this form only chooses
+ * the number.
+ */
+const rulesSchema = z.object({
+  maxAdvanceDays: z.coerce.number().int().min(1).max(3650),
+  minLeadMinutes: z.coerce.number().int().min(0).max(43200),
+  maxReschedules: z.coerce.number().int().min(0).max(50),
+  maxActivePerCustomer: z.coerce.number().int().min(1).max(500),
+  minRescheduleHours: z.coerce.number().int().min(0).max(720),
+  minCancelHours: z.coerce.number().int().min(0).max(720),
+  slotIntervalMinutes: z.coerce.number().int().min(5).max(240),
+  autoConfirm: z.coerce.boolean(),
+});
+
+export async function saveBookingRules(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { member, error } = await requireAdmin();
+  if (!member) return { error };
+
+  const parsed = rulesSchema.safeParse({
+    maxAdvanceDays: formData.get("maxAdvanceDays"),
+    minLeadMinutes: formData.get("minLeadMinutes"),
+    maxReschedules: formData.get("maxReschedules"),
+    maxActivePerCustomer: formData.get("maxActivePerCustomer"),
+    minRescheduleHours: formData.get("minRescheduleHours"),
+    minCancelHours: formData.get("minCancelHours"),
+    slotIntervalMinutes: formData.get("slotIntervalMinutes"),
+    // An unticked checkbox sends nothing at all.
+    autoConfirm: formData.get("autoConfirm") === "on",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check those numbers and try again." };
+  }
+
+  const supabase = await createClient();
+
+  // Read-modify-write rather than a blind overwrite: `booking_rules` may hold
+  // keys this form does not show, and replacing the object would silently
+  // drop them.
+  const { data: current, error: readError } = await supabase
+    .from("businesses")
+    .select("booking_rules")
+    .eq("id", member.businessId)
+    .single();
+
+  if (readError || !current) return { error: describeWriteError(readError) };
+
+  const existing = (current.booking_rules ?? {}) as Record<string, unknown>;
+  const input = parsed.data;
+
+  const { error: writeError } = await supabase
+    .from("businesses")
+    .update({
+      booking_rules: {
+        ...existing,
+        max_advance_days: input.maxAdvanceDays,
+        min_lead_minutes: input.minLeadMinutes,
+        max_reschedules: input.maxReschedules,
+        max_active_per_customer: input.maxActivePerCustomer,
+        min_reschedule_hours: input.minRescheduleHours,
+        min_cancel_hours: input.minCancelHours,
+        slot_interval_minutes: input.slotIntervalMinutes,
+        auto_confirm: input.autoConfirm,
+      },
+    })
+    .eq("id", member.businessId);
+
+  if (writeError) {
+    logger.warn("settings.rules.failed", {
+      businessId: member.businessId,
+      code: writeError.code,
+    });
+    return { error: describeWriteError(writeError) };
+  }
+
+  // The public booking page reads these on every request, and the slot grid
+  // is built from them.
+  revalidatePath("/app/settings/rules");
+  revalidatePath(`/book/${member.slug}`);
+  return { ok: "Saved. Your booking page follows these from the next visit." };
+}
