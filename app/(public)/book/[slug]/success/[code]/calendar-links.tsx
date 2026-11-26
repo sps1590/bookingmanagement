@@ -23,14 +23,14 @@ export function CalendarLinks({ event, fileName }: { event: CalendarEvent; fileN
         href={googleCalendarUrl(event)}
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800"
+        className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex min-h-10 items-center rounded-lg border px-3.5 text-sm font-medium transition-colors"
       >
         Add to Google Calendar
       </a>
       <a
         href={href}
         download={fileName}
-        className="rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800"
+        className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex min-h-10 items-center rounded-lg border px-3.5 text-sm font-medium transition-colors"
       >
         Download calendar file
       </a>

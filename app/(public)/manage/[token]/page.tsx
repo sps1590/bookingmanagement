@@ -64,13 +64,13 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
     }).format(new Date(new Date(booking.start_time).getTime() - hours * 3600_000));
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-12">
+    <main className="mx-auto max-w-lg px-4 py-12 sm:px-6">
       <p className="text-muted-foreground text-sm">{booking.business_name}</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">
         {terms.booking} · {booking.booking_code}
       </h1>
 
-      <dl className="mt-6 space-y-2 rounded-md border border-neutral-200 px-5 py-4 text-sm dark:border-neutral-800">
+      <dl className="bg-card border-border/70 elevated mt-6 space-y-2.5 rounded-2xl border px-5 py-4 text-sm">
         <Row label="When" value={when} />
         <Row label="What" value={booking.service_name} />
         <Row label={terms.staff} value={booking.staff_name} />
@@ -103,7 +103,7 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
           />
         </>
       ) : (
-        <p className="mt-6 rounded-md bg-neutral-100 px-4 py-3 text-sm text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+        <p className="bg-muted text-muted-foreground mt-6 rounded-xl px-4 py-3 text-sm">
           This {terms.booking.toLowerCase()} can no longer be changed online.
           {booking.business_phone
             ? ` Please call ${formatPhoneForDisplay(booking.business_phone)}.`

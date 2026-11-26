@@ -131,7 +131,7 @@ export function ManageBooking({
       {problem ? (
         <p
           role="alert"
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          className="bg-warning/15 text-warning-foreground ring-warning/30 dark:text-warning mb-4 rounded-xl px-4 py-2.5 text-sm ring-1 ring-inset"
         >
           {problem}
         </p>
@@ -151,7 +151,7 @@ export function ManageBooking({
           <button
             type="button"
             onClick={() => setMode("cancel")}
-            className="rounded-md border border-neutral-200 px-4 py-2 text-sm dark:border-neutral-800"
+            className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex min-h-10 items-center rounded-lg border px-4 text-sm font-medium transition-colors"
           >
             Cancel it
           </button>
@@ -184,10 +184,10 @@ export function ManageBooking({
                     type="button"
                     onClick={() => setChosen(slot.start)}
                     aria-pressed={chosen === slot.start}
-                    className={`rounded-md border px-3 py-2 text-sm ${
+                    className={`tabular min-h-11 rounded-xl border px-3.5 text-sm font-medium transition-colors ${
                       chosen === slot.start
-                        ? "border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
-                        : "border-border"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:border-primary/40 hover:text-primary"
                     }`}
                   >
                     {time.format(new Date(slot.start))}
@@ -209,7 +209,7 @@ export function ManageBooking({
             <button
               type="button"
               onClick={() => setMode("idle")}
-              className="rounded-md border border-neutral-200 px-4 py-2 text-sm dark:border-neutral-800"
+              className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex min-h-10 items-center rounded-lg border px-4 text-sm font-medium transition-colors"
             >
               Keep it as it is
             </button>
@@ -242,7 +242,7 @@ export function ManageBooking({
             <button
               type="button"
               onClick={() => setMode("idle")}
-              className="rounded-md border border-neutral-200 px-4 py-2 text-sm dark:border-neutral-800"
+              className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex min-h-10 items-center rounded-lg border px-4 text-sm font-medium transition-colors"
             >
               No, keep it
             </button>

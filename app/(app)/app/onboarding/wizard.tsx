@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { inputClass } from "@/components/ui/field";
 import type { Terminology } from "@/lib/terminology";
 
 import {
@@ -50,25 +51,23 @@ export function Wizard({
   );
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-12">
-      <ol className="mb-10 flex items-center gap-2 text-xs">
+    <div className="mx-auto max-w-xl px-4 py-10 sm:px-6 sm:py-14">
+      <ol className="mb-8 flex items-center gap-2 text-xs">
         {STEPS.map((step, i) => (
           <li key={step.id} className="flex flex-1 items-center gap-2">
             <span
               className={`flex size-6 shrink-0 items-center justify-center rounded-full font-mono ${
                 i < index
-                  ? "bg-green-600 text-white"
+                  ? "bg-success text-success-foreground"
                   : i === index
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "text-muted-foreground bg-neutral-200 dark:bg-neutral-800"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {i < index ? "✓" : i + 1}
             </span>
             <span className="hidden sm:inline">{step.label}</span>
-            {i < STEPS.length - 1 ? (
-              <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
-            ) : null}
+            {i < STEPS.length - 1 ? <span className="bg-border h-px flex-1" /> : null}
           </li>
         ))}
       </ol>
@@ -90,7 +89,10 @@ function DetailsStep({ business }: { business: WizardBusiness }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveDetails, {});
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      className="bg-card border-border/70 elevated space-y-6 rounded-2xl border p-5 sm:p-6"
+    >
       <Header
         title="Business details"
         blurb={`Your booking page will live at ${business.appUrl}/book/<your address>. Customers see this, so use the name they know you by.`}
@@ -168,7 +170,10 @@ function ServiceStep({
   const [state, action, pending] = useActionState<ActionState, FormData>(saveFirstService, {});
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      className="bg-card border-border/70 elevated space-y-6 rounded-2xl border p-5 sm:p-6"
+    >
       <Header
         title={`Your first ${terminology.booking.toLowerCase()}`}
         blurb={`One is enough to get going — you can add the rest afterwards. ${business.serviceCount > 0 ? `You already have ${business.serviceCount}.` : ""}`}
@@ -210,7 +215,7 @@ function ServiceStep({
         </Field>
       </div>
 
-      <fieldset className="rounded-md border border-neutral-200 p-4 dark:border-neutral-800">
+      <fieldset className="border-border bg-muted/30 rounded-xl border p-4">
         <legend className="px-1 text-sm font-medium">Gaps around it</legend>
         <p className="text-muted-foreground mb-3 text-xs">
           Time held before and after, for setup or cleaning. The booking page will never offer a
@@ -264,7 +269,10 @@ function HoursStep({ terminology }: { terminology: Terminology }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveWorkingHours, {});
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      className="bg-card border-border/70 elevated space-y-6 rounded-2xl border p-5 sm:p-6"
+    >
       <Header
         title="Working hours"
         blurb={`When are you open? This is what the booking page turns into bookable slots, minus anything already taken and minus each ${terminology.booking.toLowerCase()}'s gaps.`}
@@ -274,13 +282,13 @@ function HoursStep({ terminology }: { terminology: Terminology }) {
       <fieldset>
         <legend className="mb-2 text-sm font-medium">Open on</legend>
         {state.fieldErrors?.days ? (
-          <p className="mb-2 text-xs text-red-600 dark:text-red-400">{state.fieldErrors.days}</p>
+          <p className="text-destructive mb-2 text-xs">{state.fieldErrors.days}</p>
         ) : null}
         <div className="flex flex-wrap gap-2">
           {DAY_NAMES.map((day, index) => (
             <label
               key={day}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-300 px-3 py-1.5 text-sm has-checked:border-neutral-900 has-checked:bg-neutral-900 has-checked:text-white dark:border-neutral-700 dark:has-checked:border-white dark:has-checked:bg-white dark:has-checked:text-neutral-900"
+              className="border-border hover:border-primary/40 has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition-colors"
             >
               <input
                 type="checkbox"
@@ -304,7 +312,7 @@ function HoursStep({ terminology }: { terminology: Terminology }) {
         </Field>
       </div>
 
-      <fieldset className="rounded-md border border-neutral-200 p-4 dark:border-neutral-800">
+      <fieldset className="border-border bg-muted/30 rounded-xl border p-4">
         <legend className="px-1 text-sm font-medium">Daily break (optional)</legend>
         <div className="grid grid-cols-2 gap-4">
           <Field label="From" name="breakStart" error={state.fieldErrors?.breakStart}>
@@ -332,7 +340,10 @@ function GoLiveStep({
   const url = `${business.appUrl}/book/${business.slug}`;
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      className="bg-card border-border/70 elevated space-y-6 rounded-2xl border p-5 sm:p-6"
+    >
       <Header
         title="Ready to go live"
         blurb="Until you publish, your booking page is not reachable — so nobody can book a half-configured diary."
@@ -348,7 +359,7 @@ function GoLiveStep({
         <Row term="Booking page" value={url} />
       </dl>
 
-      <div className="rounded-md bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
+      <div className="bg-warning/15 text-warning-foreground dark:text-warning rounded-xl px-3.5 py-3 text-xs leading-relaxed">
         <strong>About reminders.</strong> This platform sends them by email, browser notification
         and calendar invite. It does not send SMS — no SMS gateway in Bangladesh has a free tier,
         and we would rather tell you that than bill you for it. A customer who gives only a phone
@@ -360,16 +371,13 @@ function GoLiveStep({
   );
 }
 
-const control =
-  "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-400";
+const control = inputClass;
 
 function Header({ title, blurb }: { title: string; blurb: string }) {
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground dark:text-muted-foreground/70 mt-2 text-sm leading-relaxed">
-        {blurb}
-      </p>
+      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{blurb}</p>
     </div>
   );
 }
@@ -379,7 +387,7 @@ function Problem({ state }: { state: ActionState }) {
   return (
     <p
       role="alert"
-      className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400"
+      className="bg-destructive/10 text-destructive ring-destructive/20 rounded-lg px-3 py-2 text-sm ring-1 ring-inset"
     >
       {state.error}
     </p>
@@ -406,7 +414,7 @@ function Field({
       </label>
       {children}
       {hint && !error ? <p className="text-muted-foreground mt-1.5 text-xs">{hint}</p> : null}
-      {error ? <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{error}</p> : null}
+      {error ? <p className="text-destructive mt-1.5 text-xs">{error}</p> : null}
     </div>
   );
 }
@@ -416,7 +424,7 @@ function Submit({ pending, children }: { pending: boolean; children: React.React
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+      className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors disabled:opacity-50"
     >
       {pending ? "Saving…" : children}
     </button>
