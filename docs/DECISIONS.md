@@ -298,3 +298,22 @@ The reason is the plan's own constraint, two bullets below that table: most book
 What is kept from the multi-page design: the landing page is still server-rendered for SEO and first paint, the choices are still in the URL so a link is shareable and the back button works, and the confirmation is still its own route — `/book/[slug]/success/[code]` — because it is a page people return to and screenshot.
 
 The cost is that the flow is a client component, so the slot grid needs JavaScript. For a booking form that also needs it for the live availability refresh, that is not a new requirement.
+
+---
+
+## D-020 — No tenant is capped, and the rules are the tenant's own
+
+**Date:** 2026-11-26 (post-launch)
+**Status:** Accepted
+
+A clinic running on this deployment could not add its third doctor. The Starter Free plan allowed two, migration 0026 enforced it with a constraint trigger exactly as designed, and the only remedy the product offered was an upgrade to a tier that cannot be bought — this platform has no billing and takes no paid dependency (D-009, D-018). The cap stopped the owner using their own software and gave them nothing in exchange.
+
+Two separate kinds of limit were involved, and they are resolved differently.
+
+**Platform caps** — `max_staff`, `max_branches`, `max_monthly_bookings` — are set to NULL on every tier in migration 0029, which the enforcement already reads as "no limit". The triggers, the per-tenant counting, the gate in `create_booking_atomic` and the `PLAN_LIMIT_REACHED` code all stay. Selling a tier later means writing a number into a row, not writing code. The column defaults become NULL too, so the next plan anybody inserts is not capped at two providers by accident.
+
+A landmine came with it: `expire_subscriptions` paged past the free plan's allowance with `OFFSET (SELECT max_staff ...)`, and PostgreSQL treats `OFFSET NULL` as `OFFSET 0`. An uncapped free plan would have made a downgrade suspend every provider in the business rather than none. Guarded in 0029, and covered by tests/db/0020.
+
+**Tenant rules** — `businesses.booking_rules` — are a different problem. They were never caps on a product tier; they are a business's own policy, and they had defaults from 0003 with no screen to change them. Thirty days of forward booking refuses a six-month check-up; three open bookings per customer refuses half a course of physiotherapy. Migration 0030 raises the defaults and Settings → Booking rules makes them editable, which is the actual fix: the numbers belong to whoever answers the phone, not to a migration.
+
+What is deliberately *not* lifted: `min_lead_minutes` and the cancellation cutoffs, which are notice rather than ceiling and which the front desk can already bypass for someone standing at the counter (0023); and the abuse limits in `lib/api/rate-limit.ts`, which were raised — 10 bookings an hour per IP is one hospital's wifi on a busy morning — but not removed, because the public endpoint is unauthenticated and an unthrottled form is a gift to a script.
