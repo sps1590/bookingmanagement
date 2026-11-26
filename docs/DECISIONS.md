@@ -380,13 +380,17 @@ Next 16 ships **Cache Components** (`cacheComponents` + `partialPrefetching`), w
 
 It was evaluated first, and the recommendation was not to adopt it: the cost is a real correctness regression and the benefit for a multi-tenant console is thin. The owner read that and chose to adopt anyway. Both halves are recorded here, because the next person to look at this should find the cost stated rather than discover it.
 
-### The cost: the booking portal's 404 is now a 200
+### The cost: the booking portal's 404 is conditional now
 
 This is not a migration detail that can be engineered around. From `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md`:
 
 > With Cache Components, an interrupt can preserve its status when it runs during prerendering, before the response begins. A request-time check inside the page runs after the shell is sent, even when the shell is empty and the route sets `instant = false`, so the status remains `200`.
 
 `notFound()` on `/book/[slug]` is exactly that — a request-time check, because it depends on reading the slug from the database. `connection()` does not help: the shell comes from the layouts above the page, not from the page. `instant = false` does not help either, as the sentence above says outright. Both were tried and measured.
+
+**On Vercel the 404 survives, and that was not predictable from the documentation.** Measured against the live deployment with freshly generated slugs and `X-Vercel-Cache: MISS`: `/book/<anything>` answers **404**, with the `noindex` tag, and with our own not-found page in the body. The same build under `next start` answers 200. Vercel's runtime evidently resolves the interrupt before the status line goes out; `next start` does not.
+
+So the regression is real but narrower than the documentation implies: it bites a self-hosted deployment, not this one. It is written down at full strength anyway, because it is a platform behaviour rather than a guarantee in the framework's contract, and a future runtime change would reintroduce it silently. The tests reflect exactly that — the `noindex` assertion is the durable protection and is asserted strictly; the status is allowed to be either 200 or 404, since pinning it would fail in one environment or the other.
 
 What replaces the status is `<meta name="robots" content="noindex">`, injected by Next.js into the streamed response, which Google documents as sufficient to keep a URL out of search results. Verified both ways: present on an unknown slug, absent on a real one.
 

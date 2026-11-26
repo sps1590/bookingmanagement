@@ -76,14 +76,24 @@ test("an unknown booking slug is not indexable, and gives nothing away", async (
   //    injects this in place of the status code, and Google documents it as
   //    sufficient. If it ever stops being injected, this test fails and the
   //    page starts being indexed — which is the failure worth catching.
+  // Generous timeout: the tag arrives with the streamed body rather than the
+  // shell, and in dev the route compiles on first hit.
   await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1, {
-    timeout: 10_000,
+    timeout: 20_000,
   });
 
   // The other half — that a *real* booking page does not carry the tag, so
   // tenants do not all fall out of search together — needs a published
   // business, so it lives in booking.spec.ts behind E2E_TENANT_SLUG.
-  //
-  // The status is the documented 200; asserted so a silent change is visible.
-  expect(response?.status()).toBe(200);
+
+  // The status is deliberately not pinned, because it differs by host and
+  // both answers are acceptable. Under `next start`, which is what this suite
+  // and CI run, the prerendered shell commits a 200 before `notFound()` gets
+  // to speak. On Vercel the same build answers 404 — verified against the
+  // live deployment with fresh slugs and a cache MISS — because its runtime
+  // resolves the interrupt before the status goes out. That is a platform
+  // behaviour rather than a documented framework guarantee, so the tag above
+  // is what this test actually protects; asserting 200 here would fail the
+  // day we self-host differently, and asserting 404 would fail today.
+  expect([200, 404]).toContain(response?.status());
 });
