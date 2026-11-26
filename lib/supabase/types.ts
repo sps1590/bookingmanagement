@@ -808,14 +808,14 @@ isOneToOne: false
                   ]
                 },"subscription_plans": {
                   Row: {
-                    "code": string,"created_at": string,"currency": string,"features": NonNullable<Json>,"id": string,"is_active": boolean,"max_branches": number,"max_monthly_bookings": number,"max_staff": number,"monthly_email_quota": number,"monthly_price": number,"name": string,"sort_order": number,"updated_at": string
+                    "code": string,"created_at": string,"currency": string,"features": NonNullable<Json>,"id": string,"is_active": boolean,"max_branches": number | null,"max_monthly_bookings": number | null,"max_staff": number | null,"monthly_email_quota": number,"monthly_price": number,"name": string,"sort_order": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "code": string,"created_at"?: string,"currency"?: string,"features"?: NonNullable<Json>,"id"?: string,"is_active"?: boolean,"max_branches"?: number,"max_monthly_bookings"?: number,"max_staff"?: number,"monthly_email_quota"?: number,"monthly_price"?: number,"name": string,"sort_order"?: number,"updated_at"?: string
+                    "code": string,"created_at"?: string,"currency"?: string,"features"?: NonNullable<Json>,"id"?: string,"is_active"?: boolean,"max_branches"?: number | null,"max_monthly_bookings"?: number | null,"max_staff"?: number | null,"monthly_email_quota"?: number,"monthly_price"?: number,"name": string,"sort_order"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "code"?: string,"created_at"?: string,"currency"?: string,"features"?: NonNullable<Json>,"id"?: string,"is_active"?: boolean,"max_branches"?: number,"max_monthly_bookings"?: number,"max_staff"?: number,"monthly_email_quota"?: number,"monthly_price"?: number,"name"?: string,"sort_order"?: number,"updated_at"?: string
+                    "code"?: string,"created_at"?: string,"currency"?: string,"features"?: NonNullable<Json>,"id"?: string,"is_active"?: boolean,"max_branches"?: number | null,"max_monthly_bookings"?: number | null,"max_staff"?: number | null,"monthly_email_quota"?: number,"monthly_price"?: number,"name"?: string,"sort_order"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -887,7 +887,7 @@ isOneToOne: false
           Views: {
             "plan_usage": {
                   Row: {
-                    "bookings_this_month": number | null,"branches_used": number | null,"business_id": string,"features": NonNullable<Json>,"max_branches": number,"max_monthly_bookings": number,"max_staff": number,"plan_code": string,"plan_expires_at": string | null,"plan_name": string,"staff_used": number | null
+                    "bookings_this_month": number | null,"branches_used": number | null,"business_id": string,"features": NonNullable<Json>,"max_branches": number | null,"max_monthly_bookings": number | null,"max_staff": number | null,"plan_code": string,"plan_expires_at": string | null,"plan_name": string,"staff_used": number | null
                   }
                   ComputedFields: never
                   Relationships: [
