@@ -76,9 +76,14 @@ test("an unknown booking slug is not indexable, and gives nothing away", async (
   //    injects this in place of the status code, and Google documents it as
   //    sufficient. If it ever stops being injected, this test fails and the
   //    page starts being indexed — which is the failure worth catching.
+  // At least one, not exactly one. A production build emits the tag twice —
+  // once in the prerendered shell and once in the streamed not-found body —
+  // where dev emits it once. What matters is that it is there; counting it is
+  // an implementation detail that failed CI on the first attempt.
+  //
   // Generous timeout: the tag arrives with the streamed body rather than the
   // shell, and in dev the route compiles on first hit.
-  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1, {
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).not.toHaveCount(0, {
     timeout: 20_000,
   });
 
