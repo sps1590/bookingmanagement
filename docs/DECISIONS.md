@@ -368,3 +368,42 @@ There was no `loading.tsx` and no `Suspense` anywhere in the console. Next.js ha
 This version of Next ships **Cache Components** (`cacheComponents` + `partialPrefetching`), which makes Partial Prerendering the default: a static shell served immediately with runtime data streamed in, and component state preserved across navigation. It is the framework's own answer to this complaint and it is the right destination.
 
 It is not a flag flip. Data fetching becomes dynamic by default, every route segment config has to be migrated, and every page that reads cookies — which here means every console page, through `requireMember()` — must have that read moved inside a `<Suspense>` boundary or it blocks the prerender. There is a documented per-route opt-out (`instant = false`) so it can be done a screen at a time. That is its own pass, with its own verification, not a corner of this one.
+
+---
+
+## D-022 — Cache Components, evaluated and not adopted
+
+**Date:** 2026-11-26 (post-launch)
+**Status:** Rejected for now, with the condition that would change it
+
+Next 16 ships **Cache Components** (`cacheComponents` + `partialPrefetching`), which makes Partial Prerendering the default: every route serves a static shell immediately and streams the request-specific parts in behind it, and React's `<Activity>` preserves component state across client-side navigation. D-021 named it as the right destination. The migration was carried out far enough to measure the trade, then reverted.
+
+### What it costs: the booking portal's 404
+
+This is not a migration detail that can be worked around. From `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md`:
+
+> With Cache Components, an interrupt can preserve its status when it runs during prerendering, before the response begins. A request-time check inside the page runs after the shell is sent, even when the shell is empty and the route sets `instant = false`, so the status remains `200`.
+
+Our `notFound()` on `/book/[slug]` is a request-time check — it depends on a database read of the slug. Under Cache Components it can no longer answer 404. Verified: `/book/no-such-business-exists` returns **200**. `connection()`, which stops prerendering at the line it appears on, does not help, because the shell comes from the prerenderable layouts above the page rather than from the page itself. `instant = false` explicitly does not help either; the documentation says so in the sentence quoted above.
+
+Next's answer is that it injects `<meta name="robots" content="noindex">` into the streamed response, which Google treats as sufficient. Verified: the tag is present on an unknown slug and absent on a real one. The documented route to a hard 404 is to check the slug in `proxy.ts` and return the status there — which means either a database read in front of every portal request, undoing D-021, or a cached slug list whose failure mode is a valid new business 404ing on its own launch day. Neither is worth it.
+
+So the cost is real but bounded: a soft 404 on the one genuinely public, link-shared, crawlable page in the product.
+
+### What it buys here: almost nothing
+
+Partial Prerendering pays off where the shell holds real content. This is a multi-tenant console, and on every authenticated screen everything above the fold is tenant-specific — the business name, the business code, the navigation labels (which are the tenant's own vocabulary), the role, the timezone. `app/(app)/app/layout.tsx` references `member` eleven times. The static shell for those routes can only ever be the frame plus skeletons.
+
+That skeleton already exists and already ships: `loading.tsx` plus the `<Suspense>` boundary on the dashboard, both added in D-021. Measured live, `/app` returns its first byte in **48ms**. A prerendered shell would replace a streamed skeleton with a static one — worth perhaps twenty milliseconds on a path whose total is around 300ms, most of which is the trip to Singapore and back.
+
+Against that: the console shell would have to be restructured so the sidebar and topbar sit inside Suspense boundaries, and `/app/onboarding` moved into its own route group, because the layout currently returns a different tree for a tenant that has not finished onboarding and a shell cannot be prerendered when its structure depends on the data. That is real surgery on the most-used screen in a product with live users.
+
+`<Activity>` state preservation across navigation is a genuine gain and the one thing on this list worth wanting. It is not worth a soft 404 and a rebuild of the console shell on its own.
+
+### What would change this
+
+- Next makes both flags the default in the next major version, at which point this stops being a choice and the work gets done with whatever escape hatches exist then.
+- A hard 404 on `/book/[slug]` stops mattering, or Next gains a way to set a status from a request-time check.
+- The console grows screens whose above-the-fold content is genuinely not tenant-specific.
+
+Until one of those, the measurements say the work in D-021 already captured what was available, and this would trade a correctness property for twenty milliseconds.
