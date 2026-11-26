@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,8 +29,6 @@ import { CalendarLinks } from "./calendar-links";
  * shown was handed to this browser by the request that created it.
  */
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Booking confirmed",
   // A confirmation page carries a one-time credential in its URL. Keeping it
@@ -35,7 +36,32 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function BookingSuccessPage({
+export default function BookingSuccessPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string; code: string }>;
+  searchParams: Promise<{ t?: string; s?: string; e?: string }>;
+}) {
+  return (
+    <Suspense fallback={<SuccessSkeleton />}>
+      <BookingSuccessPageContent params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+function SuccessSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-14">
+      <Skeleton className="mx-auto size-12 rounded-2xl" />
+      <Skeleton className="mx-auto mt-4 h-8 w-64" />
+      <Skeleton className="mt-8 h-48 rounded-xl" />
+      <Skeleton className="mx-auto mt-6 h-40 w-40 rounded-xl" />
+    </div>
+  );
+}
+
+async function BookingSuccessPageContent({
   params,
   searchParams,
 }: {

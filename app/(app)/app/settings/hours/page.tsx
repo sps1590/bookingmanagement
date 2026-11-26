@@ -1,11 +1,11 @@
+import { Suspense } from "react";
+import { SettingsPageSkeleton } from "@/components/ui/skeleton";
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { todayIn } from "@/lib/time/zone";
 
 import { ActionForm, Submit } from "../action-form";
 import { addClosure, addHours, removeClosure, removeHours } from "../actions";
-
-export const dynamic = "force-dynamic";
 
 // 0 = Sunday, matching Postgres EXTRACT(DOW) and JavaScript getDay(), so
 // nothing has to translate at either boundary.
@@ -27,7 +27,15 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
  * A closure with nobody named shuts the whole business for that date and beats
  * any per-person leave on the same day.
  */
-export default async function HoursSettings() {
+export default function HoursSettings() {
+  return (
+    <Suspense fallback={<SettingsPageSkeleton />}>
+      <HoursSettingsContent />
+    </Suspense>
+  );
+}
+
+async function HoursSettingsContent() {
   const member = await requireMember();
   const supabase = await createClient();
   const today = todayIn(member.timezone);

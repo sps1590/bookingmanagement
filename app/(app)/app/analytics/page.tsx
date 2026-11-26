@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,8 +12,6 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIn } from "@/lib/time/zone";
 
 export const metadata: Metadata = { title: "Analytics" };
-export const dynamic = "force-dynamic";
-
 /**
  * The numbers an owner asks for.
  *
@@ -26,7 +26,19 @@ export const dynamic = "force-dynamic";
  * reschedules politely look worse than one that lets people turn up to a
  * locked door.
  */
-export default async function AnalyticsPage({
+export default function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ days?: string }>;
+}) {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton stats rows={5} />}>
+      <AnalyticsPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AnalyticsPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ days?: string }>;

@@ -20,8 +20,6 @@ import { createClient } from "@/lib/supabase/server";
  * changes their mind twice.
  */
 
-export const dynamic = "force-dynamic";
-
 const bodySchema = z.object({
   startTime: z.iso.datetime({ offset: true }),
 });

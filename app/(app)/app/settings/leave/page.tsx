@@ -1,11 +1,11 @@
+import { Suspense } from "react";
+import { SettingsPageSkeleton } from "@/components/ui/skeleton";
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { todayIn } from "@/lib/time/zone";
 
 import { ActionForm, Submit } from "../action-form";
 import { decideLeave } from "../../../staff/availability/actions";
-
-export const dynamic = "force-dynamic";
 
 /**
  * Deciding on time off (defect M-14).
@@ -15,7 +15,15 @@ export const dynamic = "force-dynamic";
  * request a state: without one, asking for leave and taking it were the same
  * action, and a clinic had no way to say "not that Thursday".
  */
-export default async function LeaveSettings() {
+export default function LeaveSettings() {
+  return (
+    <Suspense fallback={<SettingsPageSkeleton />}>
+      <LeaveSettingsContent />
+    </Suspense>
+  );
+}
+
+async function LeaveSettingsContent() {
   const member = await requireMember();
   const supabase = await createClient();
   const today = todayIn(member.timezone);

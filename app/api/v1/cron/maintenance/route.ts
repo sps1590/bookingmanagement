@@ -27,7 +27,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * fails should not stop a lapsed plan being downgraded.
  */
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**

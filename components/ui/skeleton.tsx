@@ -105,3 +105,45 @@ export function SkeletonForm({ fields = 4 }: { fields?: number }) {
     </div>
   );
 }
+
+/**
+ * A whole console screen, before its data arrives.
+ *
+ * This is what Cache Components prerenders for most console routes: the
+ * layout frame comes from `app/(app)/app/layout.tsx`, and this fills the
+ * column inside it. It replaces the per-route `loading.tsx` files — under
+ * Partial Prerendering the shell is part of the route itself rather than a
+ * separate fallback file, and it is served as static HTML rather than
+ * streamed once the server has started work.
+ */
+export function ConsolePageSkeleton({
+  stats = false,
+  rows = 6,
+}: {
+  stats?: boolean;
+  rows?: number;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <SkeletonHeader />
+      {stats ? (
+        <div className="mt-8">
+          <SkeletonStats />
+        </div>
+      ) : null}
+      <div className="mt-8">
+        <SkeletonList rows={rows} />
+      </div>
+    </div>
+  );
+}
+
+/** The column below the settings tabs, which live in the settings layout. */
+export function SettingsPageSkeleton() {
+  return (
+    <div className="mt-8 space-y-6">
+      <SkeletonForm fields={4} />
+      <SkeletonForm fields={2} />
+    </div>
+  );
+}

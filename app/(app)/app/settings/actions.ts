@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireMember } from "@/lib/auth/session";
@@ -62,7 +62,7 @@ function publishedChange(member: { slug: string }, settingsPath: string) {
   // The portal's queries are cached by tag, not by path, so the path call
   // above is not enough on its own — it clears the rendered route, which then
   // re-renders from the same cached rows. This is the one that matters.
-  revalidateTag(tenantTag(member.slug), { expire: 0 });
+  updateTag(tenantTag(member.slug));
 }
 
 // --- Services --------------------------------------------------------------
@@ -490,6 +490,6 @@ export async function saveBookingRules(
   // is built from them.
   revalidatePath("/app/settings/rules");
   revalidatePath(`/book/${member.slug}`);
-  revalidateTag(tenantTag(member.slug), { expire: 0 });
+  updateTag(tenantTag(member.slug));
   return { ok: "Saved. Your booking page follows these from the next visit." };
 }

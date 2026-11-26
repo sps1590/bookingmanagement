@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -6,8 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveTerminology } from "@/lib/terminology";
 
 import { ManageBooking } from "./manage-booking";
-
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Your appointment",
@@ -26,7 +27,29 @@ export const metadata: Metadata = {
  * produce the same 404. A response that distinguished them would be an oracle
  * for guessing.
  */
-export default async function ManagePage({ params }: { params: Promise<{ token: string }> }) {
+export default function ManagePage({ params }: { params: Promise<{ token: string }> }) {
+  // Nothing on this page may be cached: it is one customer's appointment,
+  // reached with a bearer token in the URL. The frame is prerendered, the
+  // booking is read on every request.
+  return (
+    <Suspense fallback={<ManageSkeleton />}>
+      <ManageContent params={params} />
+    </Suspense>
+  );
+}
+
+function ManageSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-14">
+      <Skeleton className="h-8 w-56" />
+      <Skeleton className="mt-3 h-4 w-72" />
+      <Skeleton className="mt-8 h-40 rounded-xl" />
+      <Skeleton className="mt-4 h-28 rounded-xl" />
+    </div>
+  );
+}
+
+async function ManageContent({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
   const supabase = await createClient();

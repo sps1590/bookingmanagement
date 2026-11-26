@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -369,7 +369,7 @@ export async function goLive(_prev: ActionState, _form: FormData): Promise<Actio
   revalidatePath(`/book/${member.slug}`);
   // Publishing is the first time this slug resolves to anything. If a visitor
   // reached the link a moment early, a cached "no such page" is sitting there.
-  revalidateTag(tenantTag(member.slug), { expire: 0 });
+  updateTag(tenantTag(member.slug));
   redirect("/app?welcome=1");
 }
 

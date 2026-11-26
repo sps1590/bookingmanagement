@@ -15,8 +15,6 @@ import { resolveTerminology } from "@/lib/terminology";
  * every provider's personal contact details to anonymous visitors.
  */
 
-export const dynamic = "force-dynamic";
-
 export const GET = route(
   "public.tenant",
   async (_request: Request, context: { params: Promise<{ slug: string }> }) => {

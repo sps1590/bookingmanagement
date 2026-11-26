@@ -20,8 +20,6 @@ import { createClient } from "@/lib/supabase/server";
  * showing them.
  */
 
-export const dynamic = "force-dynamic";
-
 const bodySchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });

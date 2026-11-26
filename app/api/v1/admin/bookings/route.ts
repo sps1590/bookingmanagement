@@ -24,8 +24,6 @@ import { addDays, zonedDayStart } from "@/lib/time/zone";
  * the query planner use the tenant index rather than filtering after the fact.
  */
 
-export const dynamic = "force-dynamic";
-
 const STATUSES = [
   "pending",
   "confirmed",

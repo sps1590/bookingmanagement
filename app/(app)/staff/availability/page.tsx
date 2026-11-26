@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,8 +11,6 @@ import { todayIn } from "@/lib/time/zone";
 import { LeaveRequest } from "./leave-request";
 
 export const metadata: Metadata = { title: "My hours" };
-export const dynamic = "force-dynamic";
-
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /**
@@ -27,7 +27,15 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
  * until somebody approves it — which is what "request" has to mean for the
  * clinic to be able to say no.
  */
-export default async function StaffAvailability() {
+export default function StaffAvailability() {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={5} />}>
+      <StaffAvailabilityContent />
+    </Suspense>
+  );
+}
+
+async function StaffAvailabilityContent() {
   const member = await requireMember();
   if (!member.onboardingComplete) redirect("/app/onboarding");
 

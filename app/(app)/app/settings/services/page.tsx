@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { SettingsPageSkeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { hintClass, inputClass, labelClass } from "@/components/ui/field";
@@ -7,8 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 
 import { ActionForm, Submit } from "../action-form";
 import { saveService, setServiceActive } from "../actions";
-
-export const dynamic = "force-dynamic";
 
 /**
  * The price list.
@@ -21,7 +21,15 @@ export const dynamic = "force-dynamic";
  * row at the moment it is made, deliberately, so editing a service next month
  * cannot silently rewrite a diary that is already agreed.
  */
-export default async function ServicesSettings() {
+export default function ServicesSettings() {
+  return (
+    <Suspense fallback={<SettingsPageSkeleton />}>
+      <ServicesSettingsContent />
+    </Suspense>
+  );
+}
+
+async function ServicesSettingsContent() {
   const member = await requireMember();
   const supabase = await createClient();
 

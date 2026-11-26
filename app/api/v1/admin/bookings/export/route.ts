@@ -30,8 +30,6 @@ import { addDays, zonedDayStart } from "@/lib/time/zone";
  * rendering text it does not have the glyphs for.
  */
 
-export const dynamic = "force-dynamic";
-
 /** Streaming is pointless under this; past it the answer is a scheduled job. */
 const MAX_ROWS = 10_000;
 

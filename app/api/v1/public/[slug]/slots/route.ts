@@ -19,8 +19,6 @@ import { publicClient } from "@/lib/supabase/public";
  * right the first time.
  */
 
-export const dynamic = "force-dynamic";
-
 const querySchema = z.object({
   serviceId: z.uuid(),
   // A plain date in the tenant's own timezone, which is what the picker shows.

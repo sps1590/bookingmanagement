@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -9,7 +11,15 @@ import { Wizard, type WizardBusiness } from "./wizard";
 
 export const metadata: Metadata = { title: "Set up your business" };
 
-export default async function OnboardingPage() {
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={4} />}>
+      <OnboardingPageContent />
+    </Suspense>
+  );
+}
+
+async function OnboardingPageContent() {
   const member = await requireMember();
 
   // Finished tenants have no business here. Sending them to the dashboard

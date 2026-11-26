@@ -23,8 +23,6 @@ import { createClient } from "@/lib/supabase/server";
  * screen disagreeing with the database.
  */
 
-export const dynamic = "force-dynamic";
-
 const bodySchema = z.object({
   startTime: z.iso.datetime({ offset: true }),
   /** Moving between columns on the calendar changes the provider too. */

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,8 +17,6 @@ import { createClient } from "@/lib/supabase/server";
 import { CustomerNotes } from "./notes";
 
 export const metadata: Metadata = { title: "Customers" };
-export const dynamic = "force-dynamic";
-
 /**
  * The customer directory.
  *
@@ -31,7 +31,19 @@ export const dynamic = "force-dynamic";
  * migration 0022 — it is on this screen that a receptionist decides whether to
  * ask for a deposit, so a counter nothing wrote was worse than no counter.
  */
-export default async function CustomersPage({
+export default function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={8} />}>
+      <CustomersPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function CustomersPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;

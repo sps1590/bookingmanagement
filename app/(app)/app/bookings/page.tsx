@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,8 +19,6 @@ import { StatusActions } from "./status-actions";
 import { WalkIn } from "./walk-in";
 
 export const metadata: Metadata = { title: "Bookings" };
-export const dynamic = "force-dynamic";
-
 /**
  * The booking list — the screen a receptionist lives in.
  *
@@ -53,7 +53,19 @@ function rangeFor(preset: Preset, timezone: string): { from: string; to: string 
   }
 }
 
-export default async function BookingsPage({
+export default function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; status?: string; q?: string; page?: string }>;
+}) {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={8} />}>
+      <BookingsPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function BookingsPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ range?: string; status?: string; q?: string; page?: string }>;

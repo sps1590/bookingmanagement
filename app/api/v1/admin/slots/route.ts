@@ -21,8 +21,6 @@ import { createClient } from "@/lib/supabase/server";
  * at the end of it. The desk cannot book a provider into their lunch.
  */
 
-export const dynamic = "force-dynamic";
-
 const querySchema = z.object({
   serviceId: z.uuid(),
   staffId: z.uuid(),

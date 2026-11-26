@@ -34,6 +34,17 @@ const SLUG = process.env.E2E_TENANT_SLUG;
 test.describe("guest booking", () => {
   test.skip(!SLUG, "Set E2E_TENANT_SLUG to a published tenant to run this against a real project.");
 
+  test("a published booking page is indexable", async ({ page }) => {
+    // The companion to the noindex assertion in smoke.spec.ts. Under Cache
+    // Components, Next.js marks a not-found page `noindex` in place of the
+    // 404 status it can no longer send (D-022). That is the right behaviour
+    // for a slug that does not exist and a catastrophe for one that does —
+    // if the tag ever leaked onto real pages, every tenant would quietly drop
+    // out of search results with nothing visibly broken.
+    await page.goto(`/book/${SLUG}`);
+    await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
+  });
+
   test("a stranger with a link books an appointment and gets a code", async ({ page }) => {
     await page.goto(`/book/${SLUG}`);
 

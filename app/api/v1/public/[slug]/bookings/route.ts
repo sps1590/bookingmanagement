@@ -30,8 +30,6 @@ import { createClient } from "@/lib/supabase/server";
  * server side of the same client makes that obvious rather than incidental.
  */
 
-export const dynamic = "force-dynamic";
-
 const bodySchema = z.object({
   serviceId: z.uuid(),
   // Null, not absent, is how the portal says "Any Available" (defect B-14).

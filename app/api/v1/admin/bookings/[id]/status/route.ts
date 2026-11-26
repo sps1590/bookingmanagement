@@ -23,8 +23,6 @@ import { createClient } from "@/lib/supabase/server";
  * than "the system".
  */
 
-export const dynamic = "force-dynamic";
-
 const bodySchema = z.object({
   status: z.enum(["pending", "confirmed", "checked_in", "completed", "cancelled", "no_show"]),
   reason: z.string().trim().max(500).optional(),

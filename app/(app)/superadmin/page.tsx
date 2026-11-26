@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 
 import { requireMember } from "@/lib/auth/session";
@@ -6,8 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { SuspendToggle } from "./suspend-toggle";
 
 export const metadata: Metadata = { title: "Platform" };
-export const dynamic = "force-dynamic";
-
 /**
  * The operator console.
  *
@@ -23,7 +23,15 @@ export const dynamic = "force-dynamic";
  * and leaves the existing diary alone, because suspending a business for
  * non-payment should not cancel a patient's appointment tomorrow.
  */
-export default async function SuperAdmin() {
+export default function SuperAdmin() {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={6} />}>
+      <SuperAdminContent />
+    </Suspense>
+  );
+}
+
+async function SuperAdminContent() {
   const member = await requireMember();
   const supabase = await createClient();
 

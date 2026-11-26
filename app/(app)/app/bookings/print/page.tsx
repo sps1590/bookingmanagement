@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -7,8 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIn, zonedDayRange } from "@/lib/time/zone";
 
 export const metadata: Metadata = { title: "Day sheet" };
-export const dynamic = "force-dynamic";
-
 /**
  * The daily serial sheet, for the clipboard at reception.
  *
@@ -22,11 +22,15 @@ export const dynamic = "force-dynamic";
  * Grouped by provider because that is how the day is actually worked, with a
  * notes column because somebody always writes on it.
  */
-export default async function PrintSheet({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>;
-}) {
+export default function PrintSheet({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={8} />}>
+      <PrintSheetContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function PrintSheetContent({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const member = await requireMember();
   if (!member.onboardingComplete) redirect("/app/onboarding");
 

@@ -30,6 +30,33 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * Cache Components: Partial Prerendering as the default.
+   *
+   * Every route ships a static shell that is served immediately, with the
+   * parts that depend on this request — who is signed in, what is booked
+   * today — streamed in behind it. Data fetching becomes dynamic by default
+   * and caching becomes explicit, which is why `dynamic = "force-dynamic"`
+   * no longer appears anywhere in this app and why the booking portal's
+   * queries carry `use cache` and a tag instead.
+   *
+   * It also brings React's `<Activity>` to client-side navigation, so a
+   * filtered list or a half-typed form survives a trip to another screen and
+   * back.
+   *
+   * The cost is recorded in D-022 and is not a detail: a request-time
+   * `notFound()` can no longer set a 404, because the shell has already
+   * started the response with a 200. `/book/[slug]` therefore answers 200
+   * with `<meta name="robots" content="noindex">` for a slug that does not
+   * exist. That was accepted deliberately.
+   *
+   * `partialPrefetching` is set explicitly because leaving it unset warns:
+   * the first release of Cache Components shipped without it. Both become
+   * the only behaviour in the next major version.
+   */
+  cacheComponents: true,
+  partialPrefetching: true,
+
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

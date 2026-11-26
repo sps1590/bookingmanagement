@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -12,8 +14,6 @@ import { addDays, todayIn, zonedDayRange } from "@/lib/time/zone";
 import { DayGrid, type CalendarBooking } from "./day-grid";
 
 export const metadata: Metadata = { title: "Calendar" };
-export const dynamic = "force-dynamic";
-
 /**
  * The day view.
  *
@@ -26,11 +26,19 @@ export const dynamic = "force-dynamic";
  * questions a receptionist actually asks — "what is left today" and "where
  * can I put this" — are both about one day. The booking list covers the rest.
  */
-export default async function CalendarPage({
+export default function CalendarPage({
   searchParams,
 }: {
   searchParams: Promise<{ date?: string }>;
 }) {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton rows={6} />}>
+      <CalendarPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function CalendarPageContent({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const member = await requireMember();
   if (!member.onboardingComplete) redirect("/app/onboarding");
 

@@ -19,8 +19,6 @@ import { publicClient } from "@/lib/supabase/public";
  * publishes one person's movements to anyone with the link.
  */
 
-export const dynamic = "force-dynamic";
-
 const querySchema = z.object({
   serviceId: z.uuid(),
   year: z.coerce.number().int().min(2000).max(2100),

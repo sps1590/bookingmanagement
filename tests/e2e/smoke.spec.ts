@@ -60,10 +60,30 @@ test("the tenant area is closed to anonymous visitors", async ({ page }) => {
   await expect(page).toHaveURL(/next=%2Fapp/);
 });
 
-test("an unknown booking slug is a 404, not an error page", async ({ page }) => {
-  // A slug that does not resolve is indistinguishable from a tenant that has
-  // not published yet, and deliberately so: whether a given business is
-  // registered here is not public information.
+test("an unknown booking slug is not indexable, and gives nothing away", async ({ page }) => {
+  // This asserted a 404 status until Cache Components landed. It cannot any
+  // more, and that is documented rather than broken: the prerendered shell
+  // starts the response with a 200 before `notFound()` runs at request time,
+  // and neither `connection()` nor `instant = false` changes that. D-022
+  // records the trade.
+  //
+  // What the 404 was actually protecting still has to hold, so this asserts
+  // those two things directly instead of asserting the status that used to
+  // imply them.
   const response = await page.goto("/book/no-such-business-exists");
-  expect(response?.status()).toBe(404);
+
+  // 1. Search engines must not index booking pages that do not exist. Next.js
+  //    injects this in place of the status code, and Google documents it as
+  //    sufficient. If it ever stops being injected, this test fails and the
+  //    page starts being indexed — which is the failure worth catching.
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1, {
+    timeout: 10_000,
+  });
+
+  // The other half — that a *real* booking page does not carry the tag, so
+  // tenants do not all fall out of search together — needs a published
+  // business, so it lives in booking.spec.ts behind E2E_TENANT_SLUG.
+  //
+  // The status is the documented 200; asserted so a silent change is visible.
+  expect(response?.status()).toBe(200);
 });

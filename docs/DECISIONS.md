@@ -371,39 +371,51 @@ It is not a flag flip. Data fetching becomes dynamic by default, every route seg
 
 ---
 
-## D-022 — Cache Components, evaluated and not adopted
+## D-022 — Cache Components, adopted, and what it cost
 
 **Date:** 2026-11-26 (post-launch)
-**Status:** Rejected for now, with the condition that would change it
+**Status:** Accepted, over a recommendation against it
 
-Next 16 ships **Cache Components** (`cacheComponents` + `partialPrefetching`), which makes Partial Prerendering the default: every route serves a static shell immediately and streams the request-specific parts in behind it, and React's `<Activity>` preserves component state across client-side navigation. D-021 named it as the right destination. The migration was carried out far enough to measure the trade, then reverted.
+Next 16 ships **Cache Components** (`cacheComponents` + `partialPrefetching`), which makes Partial Prerendering the default: every route serves a static shell immediately and streams the request-specific parts in behind it, and React's `<Activity>` preserves component state across client-side navigation.
 
-### What it costs: the booking portal's 404
+It was evaluated first, and the recommendation was not to adopt it: the cost is a real correctness regression and the benefit for a multi-tenant console is thin. The owner read that and chose to adopt anyway. Both halves are recorded here, because the next person to look at this should find the cost stated rather than discover it.
 
-This is not a migration detail that can be worked around. From `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md`:
+### The cost: the booking portal's 404 is now a 200
+
+This is not a migration detail that can be engineered around. From `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md`:
 
 > With Cache Components, an interrupt can preserve its status when it runs during prerendering, before the response begins. A request-time check inside the page runs after the shell is sent, even when the shell is empty and the route sets `instant = false`, so the status remains `200`.
 
-Our `notFound()` on `/book/[slug]` is a request-time check — it depends on a database read of the slug. Under Cache Components it can no longer answer 404. Verified: `/book/no-such-business-exists` returns **200**. `connection()`, which stops prerendering at the line it appears on, does not help, because the shell comes from the prerenderable layouts above the page rather than from the page itself. `instant = false` explicitly does not help either; the documentation says so in the sentence quoted above.
+`notFound()` on `/book/[slug]` is exactly that — a request-time check, because it depends on reading the slug from the database. `connection()` does not help: the shell comes from the layouts above the page, not from the page. `instant = false` does not help either, as the sentence above says outright. Both were tried and measured.
 
-Next's answer is that it injects `<meta name="robots" content="noindex">` into the streamed response, which Google treats as sufficient. Verified: the tag is present on an unknown slug and absent on a real one. The documented route to a hard 404 is to check the slug in `proxy.ts` and return the status there — which means either a database read in front of every portal request, undoing D-021, or a cached slug list whose failure mode is a valid new business 404ing on its own launch day. Neither is worth it.
+What replaces the status is `<meta name="robots" content="noindex">`, injected by Next.js into the streamed response, which Google documents as sufficient to keep a URL out of search results. Verified both ways: present on an unknown slug, absent on a real one.
 
-So the cost is real but bounded: a soft 404 on the one genuinely public, link-shared, crawlable page in the product.
+The two properties the 404 was actually protecting both survive, and are now asserted directly rather than implied by a status code:
 
-### What it buys here: almost nothing
+- **Not indexable.** `tests/e2e/smoke.spec.ts` asserts the `noindex` tag on an unknown slug. Its companion in `tests/e2e/booking.spec.ts` — gated behind `E2E_TENANT_SLUG`, since it needs a published business — asserts the tag's *absence* on a real booking page. The second matters more than it looks: if that tag ever leaked onto real pages, every tenant would drop out of search results at once with nothing visibly broken.
+- **Not an enumeration oracle.** An unpublished tenant and a mistyped slug still render identically, so the portal gives away no more than before.
 
-Partial Prerendering pays off where the shell holds real content. This is a multi-tenant console, and on every authenticated screen everything above the fold is tenant-specific — the business name, the business code, the navigation labels (which are the tenant's own vocabulary), the role, the timezone. `app/(app)/app/layout.tsx` references `member` eleven times. The static shell for those routes can only ever be the frame plus skeletons.
+The documented route back to a hard 404 is a slug check in `proxy.ts`. Rejected: that means either a database read in front of every portal request, undoing D-021, or a cached slug list whose failure mode is a valid new business returning 404 on its own launch day.
 
-That skeleton already exists and already ships: `loading.tsx` plus the `<Suspense>` boundary on the dashboard, both added in D-021. Measured live, `/app` returns its first byte in **48ms**. A prerendered shell would replace a streamed skeleton with a static one — worth perhaps twenty milliseconds on a path whose total is around 300ms, most of which is the trip to Singapore and back.
+### What it buys
 
-Against that: the console shell would have to be restructured so the sidebar and topbar sit inside Suspense boundaries, and `/app/onboarding` moved into its own route group, because the layout currently returns a different tree for a tenant that has not finished onboarding and a shell cannot be prerendered when its structure depends on the data. That is real surgery on the most-used screen in a product with live users.
+Honest accounting, since the evaluation called this thin. Every authenticated screen here is tenant-specific above the fold — the business name, the code, the navigation labels (the tenant's own vocabulary), the role, the timezone — so a static shell can only ever be the frame plus skeletons, and that skeleton already shipped via `loading.tsx` at a measured 48ms.
 
-`<Activity>` state preservation across navigation is a genuine gain and the one thing on this list worth wanting. It is not worth a soft 404 and a rebuild of the console shell on its own.
+What is genuinely gained:
 
-### What would change this
+- **`<Activity>` state preservation.** A filtered list, a scroll position, a half-typed form survives a trip to another screen and back. This is the real win and it is not available any other way.
+- **Shells with some real content.** `/app/settings/*` now ships the "Settings" heading and its description as static HTML; the console routes ship the frame, the rail skeleton and sign-out. 9–11KB, against the 0 bytes the first opted-out attempt produced.
+- **Caching that is stated rather than inherited.** `revalidate` and `force-dynamic` are gone. `lib/public/tenant.ts` carries `use cache` with a per-tenant `cacheTag`, and every settings write calls `updateTag` — which, unlike `revalidateTag`, is built for read-your-own-writes and does not hand the next request a stale copy. Measured: change a price, load the portal, the new price is there on the first read.
 
-- Next makes both flags the default in the next major version, at which point this stops being a choice and the work gets done with whatever escape hatches exist then.
-- A hard 404 on `/book/[slug]` stops mattering, or Next gains a way to set a status from a request-time check.
-- The console grows screens whose above-the-fold content is genuinely not tenant-specific.
+### What had to change to get there
 
-Until one of those, the measurements say the work in D-021 already captured what was available, and this would trade a correctness property for twenty milliseconds.
+- All 32 `dynamic = "force-dynamic"` exports removed; the config is incompatible with the flag.
+- **The onboarding wizard moved to its own route group**, `app/(app)/(wizard)/app/onboarding`. The console layout used to return a different tree when onboarding was unfinished, and a shell cannot be prerendered when its shape depends on the data.
+- **The console shell was inverted.** `app/(app)/app/layout.tsx` no longer awaits anything: the rail, the topbar and the column are static, and the business name, the nav, the role line and the booking link each sit in their own `<Suspense>` boundary. Each calls `requireMember()` itself rather than taking a prop — the lookup is request-scoped (D-021) so one call serves them all, and passing props would mean awaiting it in the layout, which is precisely what would stop the frame being static.
+- Every page follows one shape now: a synchronous default export returning `<Suspense>` around an async component that does the work. The per-route `loading.tsx` files are gone — under Partial Prerendering the shell belongs to the route rather than to a separate fallback file.
+- The `searchParams` reads on `/login` and `/signup` moved behind a boundary, so the sign-in form itself is static.
+- One behaviour regressed knowingly: the `!onboardingComplete` redirect now runs inside a boundary, so a brand-new tenant sees the console frame for an instant before being sent to the wizard. Once per business, and the alternative was to give up the shell on every console route.
+
+### What is deliberately still uncached
+
+Availability. `/api/v1/public/:slug/slots` and `/month` carry no `use cache` and never will: a slot grid that is thirty seconds stale is a customer tapping a time that has gone. Their timings confirm it — they still pay a database round trip on every call, which is the point.

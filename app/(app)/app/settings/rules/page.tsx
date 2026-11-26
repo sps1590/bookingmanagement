@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { SettingsPageSkeleton } from "@/components/ui/skeleton";
 import { hintClass, inputClass, labelClass } from "@/components/ui/field";
 import { SectionHeading } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
@@ -5,8 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 
 import { ActionForm, Submit } from "../action-form";
 import { saveBookingRules } from "../actions";
-
-export const dynamic = "force-dynamic";
 
 /**
  * The rules the booking page plays by.
@@ -22,7 +22,15 @@ export const dynamic = "force-dynamic";
  * slot engine read this column), so this form only chooses them. Nothing here
  * can be used to get around a rule — only to decide what the rule is.
  */
-export default async function BookingRulesSettings() {
+export default function BookingRulesSettings() {
+  return (
+    <Suspense fallback={<SettingsPageSkeleton />}>
+      <BookingRulesSettingsContent />
+    </Suspense>
+  );
+}
+
+async function BookingRulesSettingsContent() {
   const member = await requireMember();
   const supabase = await createClient();
 

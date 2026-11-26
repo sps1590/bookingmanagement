@@ -8,13 +8,12 @@ import { CopyLink } from "@/components/app/copy-link";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, PageShell, SectionHeading, Stat } from "@/components/ui/page";
-import { SkeletonList, SkeletonStats } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonList, SkeletonStats } from "@/components/ui/skeleton";
 import { loadDaySheet } from "@/lib/admin/day";
-import { requireMember, type MemberContext } from "@/lib/auth/session";
+import { requireMember } from "@/lib/auth/session";
 import { clientEnv } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Dashboard" };
-export const dynamic = "force-dynamic";
 
 /**
  * The day sheet: what the business looks like today.
@@ -29,79 +28,33 @@ export const dynamic = "force-dynamic";
  * would eventually disagree with the list screen, and one of the two would be
  * lying.
  *
- * ## Why the day is behind a Suspense boundary
+ * ## What is static and what streams
  *
- * This page used to wait for two things before sending a single byte: who is
- * asking, and then today's appointments. The second is the slower of the two,
- * and the first is all the page needs to draw its own frame — the business
- * name, the date, the link to the diary. So the frame streams as soon as the
- * session is known and the figures fill in underneath. Someone opening the
- * dashboard at eight in the morning sees their own clinic's name immediately
- * rather than a white tab for the length of a database round trip.
+ * This component takes no `await` at all, so the column, the section headings
+ * and the shape of the figures are prerendered and served immediately. Three
+ * things need this request and stream in behind them: the welcome banner
+ * (which reads `searchParams`), the title block (the business name, and the
+ * date, which depends on when you asked), and the day itself.
+ *
+ * Even "today" is request-time data here, which is easy to forget: a page
+ * prerendered at deploy time would say whatever day it was built on, and keep
+ * saying it. Cache Components refuses to prerender `new Date()` for exactly
+ * that reason, and it is right to.
  *
  * Not yet here, and listed so the gap is visible rather than assumed: the
  * Realtime subscription that makes a new online booking appear unprompted.
  * Until it lands, this page is accurate on load and stale afterwards.
  */
-export default async function AppHome({
-  searchParams,
-}: {
-  searchParams: Promise<{ welcome?: string }>;
-}) {
-  const member = await requireMember();
-  const { welcome } = await searchParams;
-
-  if (!member.onboardingComplete) redirect("/app/onboarding");
-
-  const t = member.terminology;
-  const bookingUrl = `${clientEnv.NEXT_PUBLIC_APP_URL}/book/${member.slug}`;
-  const today = new Intl.DateTimeFormat("en-GB", {
-    timeZone: member.timezone,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
-
+export default function AppHome({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   return (
     <PageShell>
-      {welcome === "1" ? (
-        <div className="bg-success/10 ring-success/20 mb-8 rounded-xl px-5 py-4 ring-1 ring-inset">
-          <p className="text-success flex items-center gap-2 font-semibold">
-            <PartyPopper className="size-4" aria-hidden />
-            Your booking page is live.
-          </p>
-          <p className="mt-1.5 text-sm">
-            Share it with your {t.customerPlural.toLowerCase()} and they can book themselves in.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <a
-              href={bookingUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-success text-sm font-medium break-all underline underline-offset-4"
-            >
-              {bookingUrl}
-            </a>
-            <CopyLink value={bookingUrl} />
-          </div>
-        </div>
-      ) : null}
+      <Suspense fallback={null}>
+        <WelcomeBanner searchParams={searchParams} />
+      </Suspense>
 
-      <PageHeader
-        eyebrow={today}
-        title={member.businessName}
-        description={`Everything below is today, in ${member.timezone}.`}
-        actions={
-          <Link
-            href="/app/calendar"
-            prefetch
-            className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
-          >
-            <CalendarDays className="size-4" aria-hidden />
-            Open diary
-          </Link>
-        }
-      />
+      <Suspense fallback={<HeaderSkeleton />}>
+        <DayHeader />
+      </Suspense>
 
       <Suspense
         fallback={
@@ -115,23 +68,99 @@ export default async function AppHome({
           </>
         }
       >
-        <Today member={member} bookingUrl={bookingUrl} />
+        <Today />
       </Suspense>
     </PageShell>
   );
 }
 
 /**
- * Today's figures, and the rest of today's list.
+ * Shown once, straight after the wizard publishes the booking page.
  *
- * Split out so the frame above can be sent while this is still waiting on the
- * database. It takes `member` rather than looking it up again — the session
- * lookup is request-scoped now, so a second call would cost nothing, but
- * passing it keeps the dependency visible.
+ * In its own boundary because it reads `searchParams`, and a query parameter
+ * that is absent on almost every visit should not hold up the title block.
  */
-async function Today({ member, bookingUrl }: { member: MemberContext; bookingUrl: string }) {
+async function WelcomeBanner({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const { welcome } = await searchParams;
+  if (welcome !== "1") return null;
+
+  const member = await requireMember();
+  const t = member.terminology;
+  const bookingUrl = `${clientEnv.NEXT_PUBLIC_APP_URL}/book/${member.slug}`;
+
+  return (
+    <div className="bg-success/10 ring-success/20 mb-8 rounded-xl px-5 py-4 ring-1 ring-inset">
+      <p className="text-success flex items-center gap-2 font-semibold">
+        <PartyPopper className="size-4" aria-hidden />
+        Your booking page is live.
+      </p>
+      <p className="mt-1.5 text-sm">
+        Share it with your {t.customerPlural.toLowerCase()} and they can book themselves in.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <a
+          href={bookingUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-success text-sm font-medium break-all underline underline-offset-4"
+        >
+          {bookingUrl}
+        </a>
+        <CopyLink value={bookingUrl} />
+      </div>
+    </div>
+  );
+}
+
+async function DayHeader() {
+  const member = await requireMember();
+
+  // A tenant that has not finished the wizard has no day sheet to show. This
+  // runs inside a boundary, so the redirect reaches the browser after the
+  // frame — one flash of an empty console for a brand-new business, once.
+  if (!member.onboardingComplete) redirect("/app/onboarding");
+
+  const today = new Intl.DateTimeFormat("en-GB", {
+    timeZone: member.timezone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+
+  return (
+    <PageHeader
+      eyebrow={today}
+      title={member.businessName}
+      description={`Everything below is today, in ${member.timezone}.`}
+      actions={
+        <Link
+          href="/app/calendar"
+          className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+        >
+          <CalendarDays className="size-4" aria-hidden />
+          Open diary
+        </Link>
+      }
+    />
+  );
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-3 w-40" />
+      <Skeleton className="h-8 w-full max-w-sm" />
+      <Skeleton className="h-3.5 w-full max-w-md" />
+    </div>
+  );
+}
+
+/** Today's figures, and the rest of today's list. */
+async function Today() {
+  const member = await requireMember();
   const t = member.terminology;
   const day = await loadDaySheet(member);
+  const bookingUrl = `${clientEnv.NEXT_PUBLIC_APP_URL}/book/${member.slug}`;
 
   const money = new Intl.NumberFormat("en", {
     style: "currency",
@@ -167,7 +196,6 @@ async function Today({ member, bookingUrl }: { member: MemberContext; bookingUrl
           actions={
             <Link
               href="/app/bookings"
-              prefetch
               className="text-primary text-sm font-medium underline-offset-4 hover:underline"
             >
               All {t.bookingPlural.toLowerCase()}

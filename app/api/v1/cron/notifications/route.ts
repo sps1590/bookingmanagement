@@ -33,7 +33,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * allowance in an afternoon.
  */
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** Resend's free tier, platform-wide. Also the Brevo daily figure × 10. */

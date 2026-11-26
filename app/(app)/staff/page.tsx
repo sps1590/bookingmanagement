@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsolePageSkeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,8 +12,6 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIn, zonedDayRange } from "@/lib/time/zone";
 
 export const metadata: Metadata = { title: "My day" };
-export const dynamic = "force-dynamic";
-
 /**
  * The provider's own day, on a phone.
  *
@@ -26,7 +26,15 @@ export const dynamic = "force-dynamic";
  * appointments, one-handed, on mobile data. Hence the phone number as a
  * tap-to-call link and the status buttons sized for a thumb.
  */
-export default async function StaffToday() {
+export default function StaffToday() {
+  return (
+    <Suspense fallback={<ConsolePageSkeleton stats rows={5} />}>
+      <StaffTodayContent />
+    </Suspense>
+  );
+}
+
+async function StaffTodayContent() {
   const member = await requireMember();
   if (!member.onboardingComplete) redirect("/app/onboarding");
 

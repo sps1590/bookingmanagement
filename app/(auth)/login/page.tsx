@@ -1,10 +1,25 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage({
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string; created?: string; confirm?: string }>;
+}) {
+  // The form itself is the same for everybody and is prerendered.
+  // Only the notices driven by the query string need this request.
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function LoginPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string; created?: string; confirm?: string }>;

@@ -30,8 +30,6 @@ import { createClient } from "@/lib/supabase/server";
  * to `/app` would show them an empty shell. They go back to the signup form,
  * which knows how to finish the job.
  */
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

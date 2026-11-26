@@ -1,8 +1,6 @@
 import { ok } from "@/lib/api/response";
 import { route } from "@/lib/api/handler";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Liveness probe. Deliberately reports nothing about the database or the
  * tenant set — it is a public endpoint, and uptime checks only need to know

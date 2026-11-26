@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { SettingsPageSkeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { hintClass, inputClass, labelClass } from "@/components/ui/field";
@@ -7,8 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 
 import { ActionForm, Submit } from "../action-form";
 import { saveStaff, setStaffServices } from "../actions";
-
-export const dynamic = "force-dynamic";
 
 /**
  * Providers, and which services each one performs.
@@ -23,7 +23,15 @@ export const dynamic = "force-dynamic";
  * Contact details are stored here and never published: the public portal reads
  * `public_staff`, which has no phone or email column at all (defect B-05).
  */
-export default async function StaffSettings() {
+export default function StaffSettings() {
+  return (
+    <Suspense fallback={<SettingsPageSkeleton />}>
+      <StaffSettingsContent />
+    </Suspense>
+  );
+}
+
+async function StaffSettingsContent() {
   const member = await requireMember();
   const supabase = await createClient();
 
