@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Field, Textarea } from "@/components/ui/field";
+
 import { saveCustomerNotes, type NotesState } from "./actions";
 
 /**
@@ -21,25 +23,30 @@ export function CustomerNotes({ customerId, notes }: { customerId: string; notes
   return (
     <form action={formAction}>
       <input type="hidden" name="customerId" value={customerId} />
-      <label className="block">
-        <span className="text-xs text-neutral-500">Notes</span>
-        <textarea
+      <Field
+        label="Notes"
+        htmlFor={`notes-${customerId}`}
+        hint="Only your team can read this. It never appears on the booking page."
+      >
+        <Textarea
+          id={`notes-${customerId}`}
           name="notes"
           defaultValue={notes}
           rows={4}
           placeholder="Allergies, preferences, anything the next person should know."
-          className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
         />
-      </label>
-      <div className="mt-2 flex items-center gap-3">
+      </Field>
+      <div className="mt-2.5 flex flex-wrap items-center gap-3">
         <Save />
         {state.error ? (
-          <span role="alert" className="text-xs text-amber-700 dark:text-amber-500">
+          <span role="alert" className="text-destructive text-xs">
             {state.error}
           </span>
         ) : null}
         {state.ok ? (
-          <span className="text-xs text-green-700 dark:text-green-500">{state.ok}</span>
+          <span role="status" className="text-success text-xs">
+            {state.ok}
+          </span>
         ) : null}
       </div>
     </form>
@@ -52,7 +59,7 @@ function Save() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded border border-neutral-200 px-2 py-1 text-xs disabled:opacity-50 dark:border-neutral-700"
+      className="border-border bg-card hover:border-primary/40 hover:text-primary min-h-8 rounded-lg border px-3 text-xs font-medium transition-colors disabled:opacity-50"
     >
       {pending ? "Saving…" : "Save notes"}
     </button>

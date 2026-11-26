@@ -33,7 +33,7 @@ export default async function SuperAdmin() {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <h1 className="text-xl font-semibold tracking-tight">Not for you</h1>
-        <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-muted-foreground dark:text-muted-foreground/70 mt-3 text-sm">
           This console is for platform operators. You are signed in as {member.email}.
         </p>
       </main>
@@ -62,16 +62,16 @@ export default async function SuperAdmin() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Platform</h1>
-      <p className="mt-1 text-xs text-neutral-500">
+      <p className="text-muted-foreground mt-1 text-xs">
         {rows.length} tenant{rows.length === 1 ? "" : "s"} · configuration only, never their records
       </p>
 
       {rows.length === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="border-border bg-muted/30 text-muted-foreground mt-8 rounded-xl border border-dashed px-4 py-10 text-center text-sm">
           Nobody has signed up yet.
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <ul className="divide-border/70 border-border bg-card elevated mt-6 divide-y overflow-hidden rounded-xl border">
           {rows.map((tenant) => (
             <li
               key={tenant.id}
@@ -84,7 +84,7 @@ export default async function SuperAdmin() {
                     suspended
                   </span>
                 )}
-                <span className="mt-0.5 block text-xs text-neutral-500">
+                <span className="text-muted-foreground mt-0.5 block text-xs">
                   /{tenant.slug} · {tenant.business_type} · {tenant.timezone} · joined{" "}
                   {when.format(new Date(tenant.created_at))}
                 </span>
@@ -99,9 +99,9 @@ export default async function SuperAdmin() {
       <section className="mt-10">
         <h2 className="text-sm font-medium tracking-wide uppercase">Recent operator actions</h2>
         {(audit ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">Nothing yet.</p>
+          <p className="text-muted-foreground mt-2 text-sm">Nothing yet.</p>
         ) : (
-          <ul className="mt-2 space-y-1 text-xs text-neutral-600 dark:text-neutral-400">
+          <ul className="text-muted-foreground dark:text-muted-foreground/70 mt-2 space-y-1 text-xs">
             {(audit ?? []).map((entry) => (
               <li key={entry.id}>
                 {when.format(new Date(entry.created_at))} · {entry.action}

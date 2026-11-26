@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { PageHeader, PageShell } from "@/components/ui/page";
 import { addDays, todayIn, zonedDayRange } from "@/lib/time/zone";
 
 import { DayGrid, type CalendarBooking } from "./day-grid";
@@ -50,8 +53,8 @@ export default async function CalendarPage({
       .from("bookings")
       .select(
         `id, booking_code, staff_id, start_time, end_time, status,
-         customers (full_name),
-         services (name, color_hex)`,
+      customers (full_name),
+      services (name, color_hex)`,
       )
       .eq("business_id", member.businessId)
       .gte("start_time", start)
@@ -83,36 +86,38 @@ export default async function CalendarPage({
   }).format(new Date(`${date}T12:00:00Z`));
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
-        <div className="flex items-center gap-4 text-sm">
-          <Link
-            href={`/app/calendar?date=${addDays(date, -1)}`}
-            className="underline underline-offset-4"
-          >
-            Previous
-          </Link>
-          <Link href="/app/calendar" className="underline underline-offset-4">
-            Today
-          </Link>
-          <Link
-            href={`/app/calendar?date=${addDays(date, 1)}`}
-            className="underline underline-offset-4"
-          >
-            Next
-          </Link>
-          <Link href="/app/bookings" className="underline underline-offset-4">
-            {t.bookingPlural}
-          </Link>
-        </div>
-      </div>
-
-      <p className="mt-2 text-xs text-neutral-500">
-        {cards.length}{" "}
-        {cards.length === 1 ? t.booking.toLowerCase() : t.bookingPlural.toLowerCase()} · times in{" "}
-        {member.timezone}
-      </p>
+    <PageShell>
+      <PageHeader
+        eyebrow="Diary"
+        title={heading}
+        description={`${cards.length} ${
+          cards.length === 1 ? t.booking.toLowerCase() : t.bookingPlural.toLowerCase()
+        } · times in ${member.timezone}`}
+        actions={
+          <div className="border-border bg-card inline-flex items-center rounded-lg border">
+            <Link
+              href={`/app/calendar?date=${addDays(date, -1)}`}
+              aria-label="Previous day"
+              className="hover:text-primary grid size-9 place-items-center transition-colors"
+            >
+              <ChevronLeft className="size-4" aria-hidden />
+            </Link>
+            <Link
+              href="/app/calendar"
+              className="border-border hover:text-primary border-x px-3 py-2 text-sm font-medium transition-colors"
+            >
+              Today
+            </Link>
+            <Link
+              href={`/app/calendar?date=${addDays(date, 1)}`}
+              aria-label="Next day"
+              className="hover:text-primary grid size-9 place-items-center transition-colors"
+            >
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+        }
+      />
 
       <DayGrid
         bookings={cards}
@@ -121,6 +126,6 @@ export default async function CalendarPage({
         timezone={member.timezone}
         canMove={canMove}
       />
-    </main>
+    </PageShell>
   );
 }

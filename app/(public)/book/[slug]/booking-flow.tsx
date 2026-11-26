@@ -280,19 +280,19 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
   const dayIsClosed = monthOpen[date] === false;
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-8">
-      <fieldset>
-        <legend className="text-sm font-medium tracking-wide uppercase">
+    <form onSubmit={submit} className="mt-8 space-y-4">
+      <fieldset className="bg-card border-border/70 elevated rounded-2xl border p-5">
+        <legend className="text-primary text-xs font-semibold tracking-widest uppercase">
           1. Choose a {terminology.booking.toLowerCase()}
         </legend>
         <div className="mt-3 grid gap-2">
           {services.map((s) => (
             <label
               key={s.id}
-              className={`flex cursor-pointer items-baseline justify-between gap-4 rounded-md border px-4 py-3 ${
+              className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 transition-colors ${
                 s.id === serviceId
-                  ? "border-neutral-900 dark:border-neutral-100"
-                  : "border-neutral-200 dark:border-neutral-800"
+                  ? "border-primary bg-accent text-accent-foreground ring-primary/20 ring-1"
+                  : "border-border hover:border-primary/40"
               }`}
             >
               <span>
@@ -304,8 +304,8 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
                   onChange={() => choose(setServiceId)(s.id)}
                   className="sr-only"
                 />
-                <span className="text-sm font-medium">{s.name}</span>
-                <span className="mt-0.5 block text-xs text-neutral-500">
+                <span className="font-medium">{s.name}</span>
+                <span className="text-muted-foreground mt-0.5 block text-xs">
                   {s.duration_minutes} minutes
                   {s.deposit_required > 0 ? ` · ${money.format(s.deposit_required)} deposit` : null}
                 </span>
@@ -318,17 +318,17 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend className="text-sm font-medium tracking-wide uppercase">
+      <fieldset className="bg-card border-border/70 elevated rounded-2xl border p-5">
+        <legend className="text-primary text-xs font-semibold tracking-widest uppercase">
           2. {terminology.staff} and day
         </legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-xs text-neutral-500">{terminology.staff}</span>
+            <span className="text-foreground text-sm font-medium">{terminology.staff}</span>
             <select
               value={staffId}
               onChange={(e) => choose(setStaffId)(e.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             >
               {/* Defect B-14: the spec offered this and had nothing behind it. */}
               <option value={ANY}>Any available</option>
@@ -342,16 +342,16 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
           </label>
 
           <label className="block">
-            <span className="text-xs text-neutral-500">Date</span>
+            <span className="text-foreground text-sm font-medium">Date</span>
             <input
               type="date"
               value={date}
               min={isoDate(new Date(), timezone)}
               onChange={(e) => choose(setDate)(e.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
             {dayIsClosed ? (
-              <span className="mt-1 block text-xs text-amber-700 dark:text-amber-500">
+              <span className="text-destructive mt-1 block text-xs">
                 Closed or fully booked that day.
               </span>
             ) : null}
@@ -359,14 +359,16 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend className="text-sm font-medium tracking-wide uppercase">3. Pick a time</legend>
+      <fieldset className="bg-card border-border/70 elevated rounded-2xl border p-5">
+        <legend className="text-primary text-xs font-semibold tracking-widest uppercase">
+          3. Pick a time
+        </legend>
 
         <div aria-live="polite" className="mt-3">
           {phase === "loading" ? (
-            <p className="text-sm text-neutral-500">Checking what is free…</p>
+            <p className="text-muted-foreground text-sm">Checking what is free…</p>
           ) : slots.length === 0 ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-muted-foreground text-sm">
               Nothing free on that day. Try another date
               {staffId !== ANY ? `, or choose "Any available"` : ""}.
             </p>
@@ -375,18 +377,20 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
               {(["Morning", "Afternoon", "Evening"] as const).map((part) =>
                 grouped[part].length === 0 ? null : (
                   <div key={part}>
-                    <p className="text-xs text-neutral-500">{part}</p>
-                    <div className="mt-1 flex flex-wrap gap-2">
+                    <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+                      {part}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {grouped[part].map((slot) => (
                         <button
                           key={slot.start}
                           type="button"
                           onClick={() => setChosen(slot)}
                           aria-pressed={chosen?.start === slot.start}
-                          className={`rounded-md border px-3 py-2 text-sm ${
+                          className={`tabular min-h-11 rounded-xl border px-3.5 text-sm font-medium transition-colors ${
                             chosen?.start === slot.start
-                              ? "border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
-                              : "border-neutral-200 dark:border-neutral-800"
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-card hover:border-primary/40 hover:text-primary"
                           }`}
                         >
                           {timeOf(slot.start)}
@@ -401,21 +405,28 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
         </div>
       </fieldset>
 
-      <fieldset disabled={!chosen} className={chosen ? "" : "opacity-50"}>
-        <legend className="text-sm font-medium tracking-wide uppercase">4. Your details</legend>
+      <fieldset
+        disabled={!chosen}
+        className={`bg-card border-border/70 elevated rounded-2xl border p-5 ${
+          chosen ? "" : "opacity-60"
+        }`}
+      >
+        <legend className="text-primary text-xs font-semibold tracking-widest uppercase">
+          4. Your details
+        </legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block sm:col-span-2">
-            <span className="text-xs text-neutral-500">Full name</span>
+            <span className="text-foreground text-sm font-medium">Full name</span>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Mobile number</span>
+            <span className="text-foreground text-sm font-medium">Mobile number</span>
             <input
               required
               value={phone}
@@ -423,26 +434,30 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
               inputMode="tel"
               autoComplete="tel"
               placeholder="01711 000000"
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Email (for your confirmation)</span>
+            <span className="text-foreground text-sm font-medium">
+              Email (for your confirmation)
+            </span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className="text-xs text-neutral-500">Anything we should know? (optional)</span>
+            <span className="text-foreground text-sm font-medium">
+              Anything we should know? (optional)
+            </span>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
         </div>
@@ -451,7 +466,7 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
       {problem ? (
         <p
           role="alert"
-          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          className="bg-warning/15 text-warning-foreground ring-warning/30 dark:text-warning rounded-xl px-4 py-3 text-sm ring-1 ring-inset"
         >
           {problem}
         </p>
@@ -460,7 +475,7 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
       <button
         type="submit"
         disabled={!chosen || phase === "submitting"}
-        className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors disabled:opacity-50"
       >
         {phase === "submitting"
           ? "Confirming…"
@@ -469,7 +484,7 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
             : "Pick a time first"}
       </button>
 
-      <p className="text-center text-xs text-neutral-400">All times are {timezone}.</p>
+      <p className="text-muted-foreground/70 text-center text-xs">All times are {timezone}.</p>
     </form>
   );
 }

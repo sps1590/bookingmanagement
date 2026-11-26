@@ -143,7 +143,7 @@ export function ManageBooking({
             <button
               type="button"
               onClick={() => setMode("move")}
-              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors"
             >
               Change the time
             </button>
@@ -161,7 +161,7 @@ export function ManageBooking({
       {mode === "move" ? (
         <div>
           <label className="block">
-            <span className="text-xs text-neutral-500">New day</span>
+            <span className="text-muted-foreground text-xs">New day</span>
             <input
               type="date"
               value={date}
@@ -169,13 +169,13 @@ export function ManageBooking({
                 setChosen(null);
                 setDate(e.target.value);
               }}
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
 
           <div aria-live="polite" className="mt-3">
             {slots.length === 0 ? (
-              <p className="text-sm text-neutral-500">Nothing free that day. Try another.</p>
+              <p className="text-muted-foreground text-sm">Nothing free that day. Try another.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {slots.map((slot) => (
@@ -187,7 +187,7 @@ export function ManageBooking({
                     className={`rounded-md border px-3 py-2 text-sm ${
                       chosen === slot.start
                         ? "border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
-                        : "border-neutral-200 dark:border-neutral-800"
+                        : "border-border"
                     }`}
                   >
                     {time.format(new Date(slot.start))}
@@ -202,7 +202,7 @@ export function ManageBooking({
               type="button"
               disabled={!chosen || busy}
               onClick={() => void move()}
-              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors disabled:opacity-50"
             >
               {busy ? "Moving…" : "Confirm the new time"}
             </button>
@@ -223,11 +223,11 @@ export function ManageBooking({
             Cancel this appointment? The time is given back to someone else straight away.
           </p>
           <label className="mt-3 block">
-            <span className="text-xs text-neutral-500">Reason (optional)</span>
+            <span className="text-muted-foreground text-xs">Reason (optional)</span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <div className="mt-4 flex gap-2">

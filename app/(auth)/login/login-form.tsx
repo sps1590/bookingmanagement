@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Field, FormError, Input } from "@/components/ui/field";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm({
@@ -47,67 +48,49 @@ export function LoginForm({
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Welcome back. Your diary is where you left it.
+        </p>
         {justCreated ? (
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="bg-success/10 text-success mt-4 rounded-lg px-3 py-2 text-sm">
             Your business is set up. Sign in to finish configuring it.
           </p>
         ) : null}
         {confirmFailed ? (
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="bg-warning/15 text-warning-foreground dark:text-warning mt-4 rounded-lg px-3 py-2 text-sm">
             That confirmation link did not work — it may have expired, been used already, or been
             opened in a different browser. Sign in below, or sign up again to get a new one.
           </p>
         ) : null}
       </div>
 
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400"
-        >
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError>{error}</FormError> : null}
 
-      <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-400"
-        />
-      </div>
+      <Field label="Email" htmlFor="email">
+        <Input id="email" name="email" type="email" required autoComplete="email" />
+      </Field>
 
-      <div>
-        <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-          Password
-        </label>
-        <input
+      <Field label="Password" htmlFor="password">
+        <Input
           id="password"
           name="password"
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-400"
         />
-      </div>
+      </Field>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors disabled:opacity-50"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
 
-      <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-muted-foreground text-center text-sm">
         New here?{" "}
-        <a href="/signup" className="underline">
+        <a href="/signup" className="text-primary font-medium underline underline-offset-4">
           Create your business
         </a>
       </p>

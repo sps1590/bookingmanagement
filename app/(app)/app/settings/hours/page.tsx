@@ -59,7 +59,7 @@ export default async function HoursSettings() {
 
   if (people.length === 0) {
     return (
-      <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
+      <p className="border-border bg-muted/30 text-muted-foreground mt-8 rounded-xl border border-dashed px-4 py-10 text-center text-sm">
         Add a {t.staff.toLowerCase()} first — hours belong to a person, not to the business.
       </p>
     );
@@ -75,11 +75,11 @@ export default async function HoursSettings() {
             <h2 className="text-sm font-medium tracking-wide uppercase">{person.name}</h2>
 
             {mine.length === 0 ? (
-              <p className="mt-2 text-sm text-neutral-500">
+              <p className="text-muted-foreground mt-2 text-sm">
                 No hours set, so nothing can be booked with them.
               </p>
             ) : (
-              <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+              <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
                 {mine.map((rule) => (
                   <li key={rule.id} className="flex items-center justify-between gap-4 px-4 py-2">
                     <span>
@@ -88,7 +88,7 @@ export default async function HoursSettings() {
                       </span>
                       {rule.start_time.slice(0, 5)} – {rule.end_time.slice(0, 5)}
                       {rule.is_break ? (
-                        <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] dark:bg-neutral-800">
+                        <span className="bg-muted text-muted-foreground ml-2 rounded px-1.5 py-0.5 text-[11px]">
                           break
                         </span>
                       ) : null}
@@ -109,10 +109,10 @@ export default async function HoursSettings() {
             >
               <input type="hidden" name="staffId" value={person.id} />
               <label className="block">
-                <span className="text-xs text-neutral-500">Day</span>
+                <span className="text-muted-foreground text-xs">Day</span>
                 <select
                   name="day"
-                  className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+                  className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
                 >
                   {DAYS.map((day, index) => (
                     <option key={day} value={index}>
@@ -135,19 +135,19 @@ export default async function HoursSettings() {
 
       <section>
         <h2 className="text-sm font-medium tracking-wide uppercase">Closed days</h2>
-        <p className="mt-1 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-1 text-xs">
           Holidays and leave. Leaving the person blank shuts the whole business that day.
         </p>
 
         {(closures ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">Nothing coming up.</p>
+          <p className="text-muted-foreground mt-2 text-sm">Nothing coming up.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
             {(closures ?? []).map((closure) => (
               <li key={closure.id} className="flex items-center justify-between gap-4 px-4 py-2">
                 <span>
                   <span className="font-medium">{closure.override_date}</span>
-                  <span className="text-neutral-500">
+                  <span className="text-muted-foreground">
                     {" "}
                     · {closure.staff_id ? (nameOf.get(closure.staff_id) ?? "—") : "whole business"}
                     {closure.reason ? ` · ${closure.reason}` : null}
@@ -168,20 +168,20 @@ export default async function HoursSettings() {
           className="mt-3 flex flex-wrap items-end gap-3"
         >
           <label className="block">
-            <span className="text-xs text-neutral-500">Date</span>
+            <span className="text-muted-foreground text-xs">Date</span>
             <input
               type="date"
               name="date"
               min={today}
               required
-              className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Who</span>
+            <span className="text-muted-foreground text-xs">Who</span>
             <select
               name="staffId"
-              className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             >
               <option value="">Whole business</option>
               {people.map((person) => (
@@ -192,11 +192,11 @@ export default async function HoursSettings() {
             </select>
           </label>
           <label className="block grow">
-            <span className="text-xs text-neutral-500">Reason (optional)</span>
+            <span className="text-muted-foreground text-xs">Reason (optional)</span>
             <input
               name="reason"
               placeholder="Eid holiday"
-              className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
             />
           </label>
           <Submit subtle label="Mark closed" />
@@ -217,13 +217,13 @@ function TimeField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-neutral-500">{label}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
       <input
         type="time"
         name={name}
         defaultValue={defaultValue}
         required
-        className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+        className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/25 mt-1 min-h-10 rounded-lg border px-3 py-2 text-sm focus-visible:ring-3 focus-visible:outline-none"
       />
     </label>
   );

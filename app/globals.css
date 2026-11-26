@@ -4,12 +4,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * The product's colour, type and shape.
+ *
+ * Everything below is a token, and every screen reads tokens rather than
+ * `neutral-200`. That is not tidiness for its own sake: the application is
+ * read in a bright reception at 9am and on a phone in a dim room at 9pm, and
+ * a page written in fixed greys can only be correct in one of them.
+ *
+ * The palette is a deep indigo against a very slightly cool white. Indigo
+ * because this is software people stand at a desk and use all day — a
+ * saturated brand colour at full strength on every button is exhausting, so
+ * the hue carries the identity and the neutrals carry the work. The greys are
+ * not pure: a trace of the same hue keeps a page of cards from looking like
+ * photocopier output.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /* The root layout defines --font-geist-sans. The previous value here was
+     `var(--font-sans)` pointing at itself, so `font-sans` resolved to nothing
+     and the entire product rendered in the browser's default serif. */
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +45,11 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -49,72 +72,84 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.993 0.003 265);
+  --foreground: oklch(0.21 0.02 266);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.21 0.02 266);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.21 0.02 266);
+  --primary: oklch(0.52 0.18 273);
+  --primary-foreground: oklch(0.99 0.005 273);
+  --secondary: oklch(0.962 0.008 266);
+  --secondary-foreground: oklch(0.3 0.03 266);
+  --muted: oklch(0.967 0.006 266);
+  --muted-foreground: oklch(0.53 0.022 266);
+  --accent: oklch(0.955 0.022 273);
+  --accent-foreground: oklch(0.37 0.1 273);
+  --destructive: oklch(0.577 0.213 25.5);
+  --destructive-foreground: oklch(0.99 0.01 25);
+  --success: oklch(0.58 0.13 158);
+  --success-foreground: oklch(0.99 0.01 158);
+  --warning: oklch(0.72 0.15 72);
+  --warning-foreground: oklch(0.25 0.06 72);
+  --border: oklch(0.918 0.008 266);
+  --input: oklch(0.918 0.008 266);
+  --ring: oklch(0.52 0.18 273);
+  /* Ordered for distinctness, not for prettiness: adjacent series in a chart
+     must stay apart for a reader who cannot separate red from green. */
+  --chart-1: oklch(0.55 0.18 273);
+  --chart-2: oklch(0.65 0.13 195);
+  --chart-3: oklch(0.74 0.15 72);
+  --chart-4: oklch(0.62 0.18 12);
+  --chart-5: oklch(0.6 0.13 150);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.985 0.005 266);
+  --sidebar-foreground: oklch(0.3 0.025 266);
+  --sidebar-primary: oklch(0.52 0.18 273);
+  --sidebar-primary-foreground: oklch(0.99 0.005 273);
+  --sidebar-accent: oklch(0.95 0.022 273);
+  --sidebar-accent-foreground: oklch(0.37 0.1 273);
+  --sidebar-border: oklch(0.918 0.008 266);
+  --sidebar-ring: oklch(0.52 0.18 273);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --background: oklch(0.17 0.015 266);
+  --foreground: oklch(0.967 0.005 266);
+  --card: oklch(0.215 0.018 266);
+  --card-foreground: oklch(0.967 0.005 266);
+  --popover: oklch(0.235 0.02 266);
+  --popover-foreground: oklch(0.967 0.005 266);
+  --primary: oklch(0.7 0.145 277);
+  --primary-foreground: oklch(0.19 0.04 277);
+  --secondary: oklch(0.275 0.02 266);
+  --secondary-foreground: oklch(0.95 0.008 266);
+  --muted: oklch(0.265 0.018 266);
+  --muted-foreground: oklch(0.73 0.02 266);
+  --accent: oklch(0.31 0.045 275);
+  --accent-foreground: oklch(0.92 0.04 275);
+  --destructive: oklch(0.68 0.18 23);
+  --destructive-foreground: oklch(0.15 0.03 23);
+  --success: oklch(0.72 0.14 158);
+  --success-foreground: oklch(0.17 0.04 158);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.2 0.05 75);
+  --border: oklch(1 0 0 / 11%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --ring: oklch(0.7 0.145 277);
+  --chart-1: oklch(0.7 0.15 277);
+  --chart-2: oklch(0.74 0.12 195);
+  --chart-3: oklch(0.8 0.14 72);
+  --chart-4: oklch(0.7 0.16 12);
+  --chart-5: oklch(0.72 0.12 150);
+  --sidebar: oklch(0.195 0.016 266);
+  --sidebar-foreground: oklch(0.9 0.01 266);
+  --sidebar-primary: oklch(0.7 0.145 277);
+  --sidebar-primary-foreground: oklch(0.19 0.04 277);
+  --sidebar-accent: oklch(0.3 0.045 275);
+  --sidebar-accent-foreground: oklch(0.93 0.035 275);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.7 0.145 277);
 }
 
 @layer base {
@@ -126,5 +161,27 @@
   }
   html {
     @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* A number that changes while you read it should not also change width.
+     Times, prices and counts are everywhere in this product. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* The one piece of chrome used in more than one place: the soft, slightly
+     coloured lift under cards and popovers. Shadows built from pure black
+     look like dirt over a tinted background. */
+  .elevated {
+    box-shadow:
+      0 1px 2px -1px oklch(0.21 0.02 266 / 0.08),
+      0 4px 16px -4px oklch(0.21 0.02 266 / 0.1);
+  }
+  .dark .elevated {
+    box-shadow:
+      0 1px 2px -1px oklch(0 0 0 / 0.5),
+      0 4px 16px -6px oklch(0 0 0 / 0.5);
   }
 }

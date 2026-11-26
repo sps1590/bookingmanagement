@@ -78,15 +78,15 @@ export default async function BookingSuccessPage({
 
   return (
     <main className="mx-auto max-w-lg px-6 py-16">
-      <p className="text-sm text-neutral-500">{business.name}</p>
+      <p className="text-muted-foreground text-sm">{business.name}</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">
         Your {terms.booking.toLowerCase()} is booked
       </h1>
 
       <div className="mt-8 rounded-md border border-neutral-200 px-5 py-6 text-center dark:border-neutral-800">
-        <p className="text-xs tracking-wide text-neutral-500 uppercase">Booking code</p>
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">Booking code</p>
         <p className="mt-1 font-mono text-3xl font-semibold tracking-widest">{code}</p>
-        <p className="mt-2 text-xs text-neutral-500">Show this at reception.</p>
+        <p className="text-muted-foreground mt-2 text-xs">Show this at reception.</p>
 
         <div
           aria-hidden="true"
@@ -98,7 +98,7 @@ export default async function BookingSuccessPage({
       {when ? (
         <p className="mt-6 text-center text-sm">
           <span className="font-medium">{when}</span>
-          <span className="block text-xs text-neutral-500">{business.timezone}</span>
+          <span className="text-muted-foreground block text-xs">{business.timezone}</span>
         </p>
       ) : null}
 
@@ -120,7 +120,7 @@ export default async function BookingSuccessPage({
       {manageUrl ? (
         <section className="mt-8">
           <h2 className="text-sm font-medium">Need to change it?</h2>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-muted-foreground dark:text-muted-foreground/70 mt-1 text-sm">
             Use this link to reschedule or cancel. Keep it to yourself — anyone with it can change
             this {terms.booking.toLowerCase()}.
           </p>
@@ -129,17 +129,17 @@ export default async function BookingSuccessPage({
           </p>
         </section>
       ) : (
-        <p className="mt-8 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-muted-foreground dark:text-muted-foreground/70 mt-8 text-sm">
           Your confirmation email has the link for changing or cancelling this{" "}
           {terms.booking.toLowerCase()}.
         </p>
       )}
 
       {/* The customer does not care which phase of a plan anything shipped in,
-          and this line said so until now. What they need to know is that the
-          calendar file above is the reliable reminder: email depends on the
-          business having configured a sender, and this one may not have. */}
-      <p className="mt-10 text-xs text-neutral-400">
+       and this line said so until now. What they need to know is that the
+       calendar file above is the reliable reminder: email depends on the
+       business having configured a sender, and this one may not have. */}
+      <p className="text-muted-foreground/70 mt-10 text-xs">
         Add it to your calendar above — that reminder is yours and does not depend on us. Any email
         we send is in addition to it.
       </p>

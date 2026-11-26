@@ -103,7 +103,10 @@ export async function saveService(_prev: ActionState, formData: FormData): Promi
       code: writeError.code,
     });
     return {
-      error: describeWriteError(writeError, "That could not be saved. Check the values and try again."),
+      error: describeWriteError(
+        writeError,
+        "That could not be saved. Check the values and try again.",
+      ),
     };
   }
 

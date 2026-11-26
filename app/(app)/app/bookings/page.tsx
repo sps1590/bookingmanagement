@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { CalendarX2, Download, Printer, Search } from "lucide-react";
+
+import { Badge, StatusBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/field";
+import { EmptyState, PageHeader, PageShell } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
@@ -70,9 +76,9 @@ export default async function BookingsPage({
     .from("bookings")
     .select(
       `id, booking_code, status, payment_status, start_time, end_time, total_price, booking_source,
-       customers (full_name, phone, no_show_count),
-       services (name),
-       staff_resources (name)`,
+     customers (full_name, phone, no_show_count),
+     services (name),
+     staff_resources (name)`,
       { count: "exact" },
     )
     .eq("business_id", member.businessId);
@@ -136,157 +142,170 @@ export default async function BookingsPage({
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.bookingPlural}</h1>
-        <div className="flex items-center gap-4">
-          <Link href="/app" className="text-sm underline underline-offset-4">
-            Dashboard
-          </Link>
-          <Link
-            href={`/app/bookings/print${range ? `?date=${range.from}` : ""}`}
-            className="text-sm underline underline-offset-4"
-          >
-            Print day sheet
-          </Link>
-          {desk ? (
-            <a
-              href={`/api/v1/admin/bookings/export?format=xlsx${
-                range ? `&from=${range.from}&to=${range.to}` : ""
-              }${status ? `&status=${status}` : ""}`}
-              className="text-sm underline underline-offset-4"
+    <PageShell>
+      <PageHeader
+        title={t.bookingPlural}
+        description={`${total} ${
+          total === 1 ? t.booking.toLowerCase() : t.bookingPlural.toLowerCase()
+        } in this view · times in ${member.timezone}`}
+        actions={
+          <>
+            <Link
+              href={`/app/bookings/print${range ? `?date=${range.from}` : ""}`}
+              className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
             >
-              Export
-            </a>
-          ) : null}
-          {desk ? (
-            <WalkIn
-              services={services ?? []}
-              staff={staff ?? []}
-              staffServices={(mappings ?? []).map((m) => `${m.staff_id}:${m.service_id}`)}
-              today={todayIn(member.timezone)}
-              timezone={member.timezone}
-            />
-          ) : null}
-        </div>
-      </div>
+              <Printer className="size-4" aria-hidden />
+              Day sheet
+            </Link>
+            {desk ? (
+              <a
+                href={`/api/v1/admin/bookings/export?format=xlsx${
+                  range ? `&from=${range.from}&to=${range.to}` : ""
+                }${status ? `&status=${status}` : ""}`}
+                className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+              >
+                <Download className="size-4" aria-hidden />
+                Export
+              </a>
+            ) : null}
+            {desk ? (
+              <WalkIn
+                services={services ?? []}
+                staff={staff ?? []}
+                staffServices={(mappings ?? []).map((m) => `${m.staff_id}:${m.service_id}`)}
+                today={todayIn(member.timezone)}
+                timezone={member.timezone}
+              />
+            ) : null}
+          </>
+        }
+      />
 
-      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
-        <label className="block">
-          <span className="text-xs text-neutral-500">When</span>
-          <select
-            name="range"
-            defaultValue={preset}
-            className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          >
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="week">Next 7 days</option>
-            <option value="all">All</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="text-xs text-neutral-500">Status</span>
-          <select
-            name="status"
-            defaultValue={status ?? "any"}
-            className="mt-1 rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          >
-            <option value="any">Any</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="checked_in">Checked in</option>
-            <option value="completed">Completed</option>
-            <option value="no_show">No-show</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </label>
-
-        <label className="block grow">
-          <span className="text-xs text-neutral-500">Booking code</span>
-          <input
-            name="q"
-            defaultValue={search}
-            placeholder="DHK-20261201-0007"
-            className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          />
-        </label>
-
-        <button
-          type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+      {/* GET, so every filtered view is a URL that can be bookmarked, sent to
+       a colleague, or reloaded after the browser is closed at lunch. */}
+      <Card className="mt-6">
+        <form
+          method="get"
+          className="grid gap-3 p-4 sm:grid-cols-[auto_auto_1fr_auto] sm:items-end"
         >
-          Apply
-        </button>
-      </form>
+          <Field label="When" htmlFor="range">
+            <Select id="range" name="range" defaultValue={preset} className="sm:w-40">
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="week">Next 7 days</option>
+              <option value="all">All</option>
+            </Select>
+          </Field>
 
-      <p className="mt-4 text-xs text-neutral-500">
-        {total} {total === 1 ? t.booking.toLowerCase() : t.bookingPlural.toLowerCase()} · times in{" "}
-        {member.timezone}
-      </p>
+          <Field label="Status" htmlFor="status">
+            <Select id="status" name="status" defaultValue={status ?? "any"} className="sm:w-44">
+              <option value="any">Any</option>
+              <option value="pending">Awaiting approval</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="checked_in">Checked in</option>
+              <option value="completed">Completed</option>
+              <option value="no_show">No-show</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+          </Field>
+
+          <Field label="Booking code" htmlFor="q">
+            <Input id="q" name="q" defaultValue={search} placeholder="DHK-20261201-0007" />
+          </Field>
+
+          <button
+            type="submit"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-4 text-sm font-medium transition-colors"
+          >
+            <Search className="size-4" aria-hidden />
+            Apply
+          </button>
+        </form>
+      </Card>
 
       {bookings.length === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
-          Nothing here. Try a wider date range.
-        </p>
+        <EmptyState
+          className="mt-6"
+          icon={<CalendarX2 aria-hidden />}
+          title={`No ${t.bookingPlural.toLowerCase()} in this view`}
+          description="Nothing matches these filters. Try a wider date range, or clear the booking code."
+          action={
+            <Link
+              href="/app/bookings?range=all"
+              className="text-primary text-sm font-medium underline underline-offset-4"
+            >
+              Show everything
+            </Link>
+          }
+        />
       ) : (
-        <ul className="mt-4 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-          {bookings.map((booking) => {
-            const customer = booking.customers as unknown as {
-              full_name: string;
-              phone: string;
-              no_show_count: number;
-            } | null;
-            const service = booking.services as unknown as { name: string } | null;
-            const provider = booking.staff_resources as unknown as { name: string } | null;
+        <Card className="mt-6 overflow-hidden">
+          <ul className="divide-border/70 divide-y">
+            {bookings.map((booking) => {
+              const customer = booking.customers as unknown as {
+                full_name: string;
+                phone: string;
+                no_show_count: number;
+              } | null;
+              const service = booking.services as unknown as { name: string } | null;
+              const provider = booking.staff_resources as unknown as { name: string } | null;
 
-            return (
-              <li key={booking.id} className="grid gap-2 px-4 py-3 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <p className="text-sm font-medium">
-                    {time.format(new Date(booking.start_time))}
-                    <span className="ml-2 font-mono text-xs text-neutral-500">
-                      {booking.booking_code}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-sm">
-                    {customer?.full_name ?? "—"}
-                    {customer?.phone ? (
-                      <span className="text-neutral-500">
-                        {" "}
-                        · {formatPhoneForDisplay(customer.phone)}
+              return (
+                <li
+                  key={booking.id}
+                  className="hover:bg-muted/40 grid gap-3 px-4 py-4 transition-colors sm:grid-cols-[1fr_auto] sm:items-center sm:px-5"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="tabular text-sm font-semibold">
+                        {time.format(new Date(booking.start_time))}
                       </span>
-                    ) : null}
-                    {/* Defect M-07: this number was always zero, so a serial
-                        no-show read as reliable. A trigger maintains it now. */}
-                    {customer && customer.no_show_count > 0 ? (
-                      <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                        {customer.no_show_count} no-show
-                        {customer.no_show_count === 1 ? "" : "s"}
+                      <span className="text-muted-foreground font-mono text-xs">
+                        {booking.booking_code}
                       </span>
-                    ) : null}
-                  </p>
-                  <p className="mt-0.5 text-xs text-neutral-500">
-                    {service?.name ?? "—"} · {provider?.name ?? "—"} ·{" "}
-                    <StatusBadge status={booking.status} />
-                    {booking.booking_source !== "online" ? ` · ${booking.booking_source}` : null}
-                    {booking.total_price > 0 ? ` · ${money.format(booking.total_price)}` : null}
-                  </p>
-                </div>
-                <div className="sm:self-center">
-                  <StatusActions bookingId={booking.id} status={booking.status} />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                      <StatusBadge status={booking.status} />
+                      {booking.booking_source !== "online" ? (
+                        <Badge tone="neutral">{booking.booking_source.replace("_", " ")}</Badge>
+                      ) : null}
+                      {/* Defect M-07: this number was always zero, so a serial
+                  no-show read as reliable. A trigger maintains it now. */}
+                      {customer && customer.no_show_count > 0 ? (
+                        <Badge tone="warning">
+                          {customer.no_show_count} no-show{customer.no_show_count === 1 ? "" : "s"}
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-1.5 truncate font-medium">
+                      {customer?.full_name ?? "—"}
+                      {customer?.phone ? (
+                        <span className="text-muted-foreground font-normal">
+                          {" · "}
+                          {formatPhoneForDisplay(customer.phone)}
+                        </span>
+                      ) : null}
+                    </p>
+
+                    <p className="text-muted-foreground mt-0.5 truncate text-sm">
+                      {service?.name ?? "—"} · {provider?.name ?? "—"}
+                      {booking.total_price > 0 ? ` · ${money.format(booking.total_price)}` : null}
+                    </p>
+                  </div>
+
+                  <div className="sm:justify-self-end">
+                    <StatusActions bookingId={booking.id} status={booking.status} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
 
       {total > pageSize ? (
-        <nav className="mt-6 flex items-center justify-between text-sm">
+        <nav className="mt-6 flex items-center justify-between gap-3">
           <PageLink page={page - 1} disabled={page === 1} params={params} label="Previous" />
-          <span className="text-xs text-neutral-500">
+          <span className="text-muted-foreground text-xs">
             Page {page} of {Math.ceil(total / pageSize)}
           </span>
           <PageLink
@@ -297,13 +316,8 @@ export default async function BookingsPage({
           />
         </nav>
       ) : null}
-    </main>
+    </PageShell>
   );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const label = status.replace("_", " ");
-  return <span className="font-medium capitalize">{label}</span>;
 }
 
 function PageLink({
@@ -317,7 +331,13 @@ function PageLink({
   params: Record<string, string | undefined>;
   label: string;
 }) {
-  if (disabled) return <span className="text-neutral-300 dark:text-neutral-700">{label}</span>;
+  if (disabled) {
+    return (
+      <span className="text-muted-foreground/50 rounded-lg border border-transparent px-3 py-2 text-sm">
+        {label}
+      </span>
+    );
+  }
 
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -326,7 +346,10 @@ function PageLink({
   query.set("page", String(page));
 
   return (
-    <Link href={`/app/bookings?${query.toString()}`} className="underline underline-offset-4">
+    <Link
+      href={`/app/bookings?${query.toString()}`}
+      className="border-border bg-card hover:border-primary/40 hover:text-primary rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+    >
       {label}
     </Link>
   );

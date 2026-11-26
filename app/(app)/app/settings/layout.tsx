@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Lock } from "lucide-react";
 
+import { EmptyState, PageHeader, PageShell } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
+
+import { SettingsTabs } from "./tabs";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -22,36 +25,32 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   const admin = member.role === "owner" || member.role === "manager";
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <Link href="/app" className="text-sm underline underline-offset-4">
-          Dashboard
-        </Link>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Settings"
+        description="What you offer, who provides it, and when you are open. The booking page follows these immediately."
+      />
 
       {admin ? (
-        <nav className="mt-4 flex flex-wrap gap-4 border-b border-neutral-200 pb-3 text-sm dark:border-neutral-800">
-          <Link href="/app/settings/services" className="underline underline-offset-4">
-            Services
-          </Link>
-          <Link href="/app/settings/staff" className="underline underline-offset-4">
-            {t.staffPlural}
-          </Link>
-          <Link href="/app/settings/hours" className="underline underline-offset-4">
-            Opening hours
-          </Link>
-          <Link href="/app/settings/leave" className="underline underline-offset-4">
-            Time off
-          </Link>
-        </nav>
+        <>
+          <SettingsTabs
+            items={[
+              { href: "/app/settings/services", label: "Services" },
+              { href: "/app/settings/staff", label: t.staffPlural },
+              { href: "/app/settings/hours", label: "Opening hours" },
+              { href: "/app/settings/leave", label: "Time off" },
+            ]}
+          />
+          {children}
+        </>
       ) : (
-        <p className="mt-4 rounded-md border border-neutral-200 px-4 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
-          Only an owner or manager can change settings. Ask one of them.
-        </p>
+        <EmptyState
+          className="mt-8"
+          icon={<Lock aria-hidden />}
+          title="Settings are for owners and managers"
+          description="Prices, providers and opening hours change what every customer sees, so they are kept to the people accountable for them. Ask an owner or a manager."
+        />
       )}
-
-      {admin ? children : null}
-    </div>
+    </PageShell>
   );
 }

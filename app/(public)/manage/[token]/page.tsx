@@ -65,7 +65,7 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <p className="text-sm text-neutral-500">{booking.business_name}</p>
+      <p className="text-muted-foreground text-sm">{booking.business_name}</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">
         {terms.booking} · {booking.booking_code}
       </h1>
@@ -84,7 +84,7 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
 
       {open ? (
         <>
-          <p className="mt-6 text-xs text-neutral-500">
+          <p className="text-muted-foreground mt-6 text-xs">
             Changes are allowed until {cutoff(booking.min_reschedule_hours)}, and cancellation until{" "}
             {cutoff(booking.min_cancel_hours)}.
             {changesLeft > 0
@@ -117,7 +117,7 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
 function Row({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div className="flex gap-3">
-      <dt className="w-20 shrink-0 text-neutral-500">{label}</dt>
+      <dt className="text-muted-foreground w-20 shrink-0">{label}</dt>
       <dd className={className}>{value}</dd>
     </div>
   );

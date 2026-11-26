@@ -54,67 +54,96 @@ export default async function PublicBookingPage({ params }: { params: Promise<{ 
   };
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{business.name}</h1>
-        {branding.welcome_message ? (
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            {branding.welcome_message}
-          </p>
-        ) : null}
-        <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-          {business.phone ? formatPhoneForDisplay(business.phone) : null}
-          {business.address ? ` · ${business.address}` : null}
-        </p>
-      </header>
-
-      <BookingFlow
-        slug={business.slug}
-        services={services}
-        staff={staff}
-        terminology={t}
-        timezone={business.timezone}
-        currency={business.currency ?? "BDT"}
-      />
-
-      {staff.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-sm font-medium tracking-wide uppercase">{t.staffPlural}</h2>
-          <ul className="mt-3 flex flex-wrap gap-3">
-            {staff.map((person) => (
-              <li
-                key={person.id}
-                className="rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800"
+    <div className="from-background via-background to-accent/40 min-h-dvh bg-gradient-to-b">
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
+        <header className="text-center">
+          <span
+            className="bg-primary text-primary-foreground mx-auto grid size-12 place-items-center rounded-2xl text-lg font-bold"
+            aria-hidden
+          >
+            {business.name.trim().charAt(0).toUpperCase()}
+          </span>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance">
+            {business.name}
+          </h1>
+          {branding.welcome_message ? (
+            <p className="text-muted-foreground mx-auto mt-3 max-w-prose text-sm leading-relaxed text-pretty">
+              {branding.welcome_message}
+            </p>
+          ) : null}
+          <p className="text-muted-foreground mt-4 text-sm">
+            {business.phone ? (
+              <a
+                href={`tel:${business.phone}`}
+                className="hover:text-primary underline-offset-4 hover:underline"
               >
-                <span className="font-medium">{person.name}</span>
-                {person.title ? (
-                  <span className="block text-xs text-neutral-500">{person.title}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+                {formatPhoneForDisplay(business.phone)}
+              </a>
+            ) : null}
+            {business.address ? ` · ${business.address}` : null}
+          </p>
+        </header>
 
-      {branches.length > 1 ? (
-        <section className="mt-8">
-          <h2 className="text-sm font-medium tracking-wide uppercase">Locations</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {branches.map((branch) => (
-              <li key={branch.id}>
-                <span className="font-medium">{branch.name}</span>
-                {branch.address ? (
-                  <span className="text-neutral-500"> · {branch.address}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+        <BookingFlow
+          slug={business.slug}
+          services={services}
+          staff={staff}
+          terminology={t}
+          timezone={business.timezone}
+          currency={business.currency ?? "BDT"}
+        />
 
-      <footer className="mt-8 text-xs text-neutral-400">
-        All times are shown in {business.timezone}.
-      </footer>
-    </main>
+        {staff.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+              {t.staffPlural}
+            </h2>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {staff.map((person) => (
+                <li
+                  key={person.id}
+                  className="border-border bg-card flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm"
+                >
+                  <span
+                    className="bg-accent text-accent-foreground grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold"
+                    aria-hidden
+                  >
+                    {person.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span>
+                    <span className="block font-medium">{person.name}</span>
+                    {person.title ? (
+                      <span className="text-muted-foreground block text-xs">{person.title}</span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {branches.length > 1 ? (
+          <section className="mt-10">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+              Locations
+            </h2>
+            <ul className="mt-3 space-y-2 text-sm">
+              {branches.map((branch) => (
+                <li key={branch.id}>
+                  <span className="font-medium">{branch.name}</span>
+                  {branch.address ? (
+                    <span className="text-muted-foreground"> · {branch.address}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <footer className="text-muted-foreground/70 mt-10 text-center text-xs">
+          All times are shown in {business.timezone}.
+        </footer>
+      </main>
+    </div>
   );
 }

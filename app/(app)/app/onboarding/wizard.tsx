@@ -60,7 +60,7 @@ export function Wizard({
                   ? "bg-green-600 text-white"
                   : i === index
                     ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800"
+                    : "text-muted-foreground bg-neutral-200 dark:bg-neutral-800"
               }`}
             >
               {i < index ? "✓" : i + 1}
@@ -108,7 +108,7 @@ function DetailsStep({ business }: { business: WizardBusiness }) {
         error={state.fieldErrors?.slug}
       >
         <div className="flex items-center gap-1">
-          <span className="shrink-0 text-xs text-neutral-500">/book/</span>
+          <span className="text-muted-foreground shrink-0 text-xs">/book/</span>
           <input name="slug" defaultValue={business.slug} required className={control} />
         </div>
       </Field>
@@ -212,7 +212,7 @@ function ServiceStep({
 
       <fieldset className="rounded-md border border-neutral-200 p-4 dark:border-neutral-800">
         <legend className="px-1 text-sm font-medium">Gaps around it</legend>
-        <p className="mb-3 text-xs text-neutral-500">
+        <p className="text-muted-foreground mb-3 text-xs">
           Time held before and after, for setup or cleaning. The booking page will never offer a
           slot that eats into these, and the database refuses one even if two people try to book the
           last two slots at the same moment.
@@ -339,7 +339,7 @@ function GoLiveStep({
       />
       <Problem state={state} />
 
-      <dl className="divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+      <dl className="divide-border/70 border-border bg-card elevated divide-y overflow-hidden rounded-xl border text-sm">
         <Row term="Business" value={business.name} />
         <Row term="Reference" value={business.businessCode} />
         <Row term={terminology.bookingPlural} value={`${business.serviceCount} service(s)`} />
@@ -367,7 +367,9 @@ function Header({ title, blurb }: { title: string; blurb: string }) {
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{blurb}</p>
+      <p className="text-muted-foreground dark:text-muted-foreground/70 mt-2 text-sm leading-relaxed">
+        {blurb}
+      </p>
     </div>
   );
 }
@@ -403,7 +405,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && !error ? <p className="mt-1.5 text-xs text-neutral-500">{hint}</p> : null}
+      {hint && !error ? <p className="text-muted-foreground mt-1.5 text-xs">{hint}</p> : null}
       {error ? <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{error}</p> : null}
     </div>
   );
@@ -424,7 +426,7 @@ function Submit({ pending, children }: { pending: boolean; children: React.React
 function Row({ term, value }: { term: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4 px-3 py-2">
-      <dt className="text-neutral-500">{term}</dt>
+      <dt className="text-muted-foreground">{term}</dt>
       <dd className="text-right font-medium break-all">{value}</dd>
     </div>
   );

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CalendarDays, PartyPopper, Sparkles } from "lucide-react";
 
+import { CopyLink } from "@/components/app/copy-link";
+import { StatusBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { EmptyState, PageHeader, PageShell, SectionHeading, Stat } from "@/components/ui/page";
 import { loadDaySheet } from "@/lib/admin/day";
 import { requireMember } from "@/lib/auth/session";
 import { clientEnv } from "@/lib/env";
@@ -21,6 +26,10 @@ export const dynamic = "force-dynamic";
  * clinic, a provider's is their own column of it. Re-deriving visibility here
  * would eventually disagree with the list screen, and one of the two would be
  * lying.
+ *
+ * The column of underlined links that used to end this page is gone: the
+ * console shell navigates now. What is left is the day itself, which is what
+ * somebody opening this screen at 8am actually came for.
  *
  * Not yet here, and listed so the gap is visible rather than assumed: the
  * Realtime subscription that makes a new online booking appear unprompted.
@@ -50,106 +59,121 @@ export default async function AppHome({
     hour: "2-digit",
     minute: "2-digit",
   });
+  const today = new Intl.DateTimeFormat("en-GB", {
+    timeZone: member.timezone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <PageShell>
       {welcome === "1" ? (
-        <div className="mb-8 rounded-md bg-green-500/10 px-4 py-3 text-sm text-green-800 dark:text-green-300">
-          <p className="font-medium">Your booking page is live.</p>
-          <p className="mt-1">
-            Share{" "}
-            <a href={bookingUrl} className="break-all underline">
-              {bookingUrl}
-            </a>{" "}
-            with your {t.customerPlural.toLowerCase()}.
+        <div className="bg-success/10 ring-success/20 mb-8 rounded-xl px-5 py-4 ring-1 ring-inset">
+          <p className="text-success flex items-center gap-2 font-semibold">
+            <PartyPopper className="size-4" aria-hidden />
+            Your booking page is live.
           </p>
+          <p className="mt-1.5 text-sm">
+            Share it with your {t.customerPlural.toLowerCase()} and they can book themselves in.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <a
+              href={bookingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-success text-sm font-medium break-all underline underline-offset-4"
+            >
+              {bookingUrl}
+            </a>
+            <CopyLink value={bookingUrl} />
+          </div>
         </div>
       ) : null}
 
-      <p className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
-        {member.businessCode} · {member.role}
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight">{member.businessName}</h1>
-      <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-        Set up and live. Times below are shown in {member.timezone}.
-      </p>
+      <PageHeader
+        eyebrow={today}
+        title={member.businessName}
+        description={`Everything below is today, in ${member.timezone}.`}
+        actions={
+          <Link
+            href="/app/calendar"
+            className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+          >
+            <CalendarDays className="size-4" aria-hidden />
+            Open diary
+          </Link>
+        }
+      />
 
-      <dl className="mt-8 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-        <Card term={`Today's ${t.bookingPlural.toLowerCase()}`} value={String(day.total)} />
-        <Card term="Awaiting approval" value={String(day.pending)} />
-        <Card term="Completed" value={String(day.completed)} />
+      <dl className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Stat label={`Today's ${t.bookingPlural.toLowerCase()}`} value={day.total} tone="brand" />
+        <Stat
+          label="Awaiting approval"
+          value={day.pending}
+          tone={day.pending > 0 ? "warning" : "default"}
+          hint={day.pending > 0 ? "Needs a decision" : undefined}
+        />
+        <Stat label="Completed" value={day.completed} tone="success" />
         {/* Completed only. A figure that counted everything booked would read
-            high all morning and fall as the day's no-shows land — the wrong
-            direction for the number an owner quotes to a bank. */}
-        <Card term="Collected" value={money.format(day.collected)} />
+        high all morning and fall as the day's no-shows land — the wrong
+        direction for the number an owner quotes to a bank. */}
+        <Stat label="Collected" value={money.format(day.collected)} hint="Completed only" />
       </dl>
 
       <section className="mt-10">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium tracking-wide uppercase">Still to come today</h2>
-          <Link href="/app/bookings" className="text-sm underline underline-offset-4">
-            All {t.bookingPlural.toLowerCase()}
-          </Link>
-        </div>
+        <SectionHeading
+          title="Still to come today"
+          actions={
+            <Link
+              href="/app/bookings"
+              className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+            >
+              All {t.bookingPlural.toLowerCase()}
+            </Link>
+          }
+        />
 
         {day.upcoming.length === 0 ? (
-          <p className="mt-3 rounded-md border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
-            {day.total === 0
-              ? `Nothing booked today.`
-              : `Everything today is done or past its time.`}
-          </p>
+          <EmptyState
+            className="mt-4"
+            icon={<Sparkles aria-hidden />}
+            title={day.total === 0 ? "Nothing booked today" : "Today is done"}
+            description={
+              day.total === 0
+                ? `Share your booking page and ${t.customerPlural.toLowerCase()} can fill it themselves — or take one at the desk from the ${t.bookingPlural.toLowerCase()} screen.`
+                : "Everything today is finished or past its time."
+            }
+            action={
+              day.total === 0 ? <CopyLink value={bookingUrl} label="Copy booking link" /> : null
+            }
+          />
         ) : (
-          <ul className="mt-3 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-            {day.upcoming.map((booking) => (
-              <li key={booking.id} className="flex items-baseline gap-3 px-4 py-2.5 text-sm">
-                <span className="w-14 shrink-0 font-medium">
-                  {clock.format(new Date(booking.start_time))}
-                </span>
-                <span className="grow truncate">
-                  {booking.customers?.full_name ?? "—"}
-                  <span className="text-neutral-500"> · {booking.services?.name ?? "—"}</span>
-                </span>
-                <span className="shrink-0 text-xs text-neutral-500 capitalize">
-                  {booking.status.replace("_", " ")}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Card className="mt-4 overflow-hidden">
+            <ul className="divide-border/70 divide-y">
+              {day.upcoming.map((booking) => (
+                <li
+                  key={booking.id}
+                  className="hover:bg-muted/40 flex items-center gap-3 px-4 py-3 transition-colors sm:px-5"
+                >
+                  <span className="tabular text-primary w-14 shrink-0 text-sm font-semibold">
+                    {clock.format(new Date(booking.start_time))}
+                  </span>
+                  <span className="min-w-0 grow">
+                    <span className="block truncate text-sm font-medium">
+                      {booking.customers?.full_name ?? "—"}
+                    </span>
+                    <span className="text-muted-foreground block truncate text-xs">
+                      {booking.services?.name ?? "—"}
+                    </span>
+                  </span>
+                  <StatusBadge status={booking.status} className="shrink-0" />
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
-
-      <div className="mt-10 space-y-2 text-sm">
-        <Link href="/app/calendar" className="block underline">
-          Day calendar
-        </Link>
-        <Link href="/app/bookings" className="block underline">
-          {t.bookingPlural} and check-in
-        </Link>
-        <Link href="/app/customers" className="block underline">
-          {t.customerPlural}
-        </Link>
-        <Link href="/app/analytics" className="block underline">
-          Analytics
-        </Link>
-        <Link href="/app/settings/services" className="block underline">
-          Settings
-        </Link>
-        <Link href="/app/onboarding" className="block underline">
-          Review setup
-        </Link>
-        <a href={bookingUrl} className="block underline">
-          View public booking page
-        </a>
-      </div>
-    </main>
-  );
-}
-
-function Card({ term, value }: { term: string; value: string }) {
-  return (
-    <div className="rounded-md border border-neutral-200 px-4 py-3 dark:border-neutral-800">
-      <dt className="text-xs text-neutral-500">{term}</dt>
-      <dd className="mt-1 text-2xl font-semibold">{value}</dd>
-    </div>
+    </PageShell>
   );
 }

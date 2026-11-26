@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LineChart, Lock } from "lucide-react";
 
+import { Card } from "@/components/ui/card";
+import { EmptyState, PageHeader, PageShell, SectionHeading, Stat } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIn } from "@/lib/time/zone";
@@ -53,14 +56,23 @@ export default async function AnalyticsPage({
 
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="mt-6 rounded-md border border-neutral-200 px-4 py-3 text-sm dark:border-neutral-800">
-          {error.code === "BK001"
-            ? "Only an owner or manager can see this."
-            : "Those figures could not be loaded."}
-        </p>
-      </main>
+      <PageShell width="narrow">
+        <PageHeader title="Analytics" />
+        <EmptyState
+          className="mt-8"
+          icon={<Lock aria-hidden />}
+          title={
+            error.code === "BK001"
+              ? "Only an owner or manager can see this"
+              : "Those figures could not be loaded"
+          }
+          description={
+            error.code === "BK001"
+              ? "Revenue is kept from the front desk deliberately. Ask an owner or a manager to look."
+              : "Try again in a moment. Nothing has been changed."
+          }
+        />
+      </PageShell>
     );
   }
 
@@ -76,84 +88,97 @@ export default async function AnalyticsPage({
   const t = member.terminology;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <div className="flex gap-3 text-sm">
-          {[7, 30, 90].map((option) => (
-            <Link
-              key={option}
-              href={`/app/analytics?days=${option}`}
-              className={
-                option === days
-                  ? "font-medium underline underline-offset-4"
-                  : "underline underline-offset-4"
-              }
-            >
-              {option} days
-            </Link>
-          ))}
-          <Link href="/app" className="underline underline-offset-4">
-            Dashboard
-          </Link>
-        </div>
-      </div>
-
-      <p className="mt-1 text-xs text-neutral-500">
-        {from} to {to} · {member.timezone}
-      </p>
+    <PageShell>
+      <PageHeader
+        title="Analytics"
+        description={`${from} to ${to}, in ${member.timezone}.`}
+        actions={
+          <div
+            role="group"
+            aria-label="Period"
+            className="bg-muted inline-flex rounded-lg p-0.5 text-sm"
+          >
+            {[7, 30, 90].map((option) => (
+              <Link
+                key={option}
+                href={`/app/analytics?days=${option}`}
+                aria-current={option === days ? "true" : undefined}
+                className={
+                  option === days
+                    ? "bg-card text-foreground elevated rounded-[0.55rem] px-3 py-1.5 font-medium"
+                    : "text-muted-foreground hover:text-foreground rounded-[0.55rem] px-3 py-1.5 transition-colors"
+                }
+              >
+                {option} days
+              </Link>
+            ))}
+          </div>
+        }
+      />
 
       {!s || Number(s.total_bookings) === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
-          Nothing in that period yet.
-        </p>
+        <EmptyState
+          className="mt-8"
+          icon={<LineChart aria-hidden />}
+          title="Nothing in that period yet"
+          description={`Once ${t.bookingPlural.toLowerCase()} start landing, this page shows what was completed, what was missed, and when your busiest hours are.`}
+        />
       ) : (
         <>
-          <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat label={t.bookingPlural} value={String(s.total_bookings)} />
-            <Stat label="Completed" value={`${s.completion_rate ?? 0}%`} />
-            <Stat label="No-shows" value={`${s.no_show_rate ?? 0}%`} />
+          <dl className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <Stat label={t.bookingPlural} value={String(s.total_bookings)} tone="brand" />
+            <Stat label="Completed" value={`${s.completion_rate ?? 0}%`} tone="success" />
+            <Stat
+              label="No-shows"
+              value={`${s.no_show_rate ?? 0}%`}
+              tone={Number(s.no_show_rate ?? 0) > 10 ? "warning" : "default"}
+            />
             <Stat label="Collected" value={money.format(Number(s.collected))} />
           </dl>
 
-          <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <dl className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <Stat label={t.customerPlural} value={String(s.distinct_customers)} />
-            <Stat label="Came back" value={String(s.repeat_customers)} />
+            <Stat
+              label="Came back"
+              value={String(s.repeat_customers)}
+              hint="Booked more than once"
+            />
             <Stat label="Cancelled" value={String(s.cancelled)} />
-            <Stat label="Booked value" value={money.format(Number(s.estimated))} />
+            <Stat
+              label="Booked value"
+              value={money.format(Number(s.estimated))}
+              hint="Including what is still to come"
+            />
           </dl>
 
           <section className="mt-10">
-            <h2 className="text-sm font-medium tracking-wide uppercase">Busiest hours</h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              Where a second {t.staff.toLowerCase()} would earn their keep.
-            </p>
-            <ul className="mt-3 space-y-1">
-              {hours.map((hour) => (
-                <li key={hour.hour_of_day} className="flex items-center gap-3 text-xs">
-                  <span className="w-10 shrink-0 tabular-nums">
-                    {String(hour.hour_of_day).padStart(2, "0")}:00
-                  </span>
-                  <span
-                    className="h-3 rounded-sm bg-neutral-800 dark:bg-neutral-200"
-                    style={{ width: `${(Number(hour.bookings) / busiest) * 100}%` }}
-                  />
-                  <span className="text-neutral-500 tabular-nums">{hour.bookings}</span>
-                </li>
-              ))}
-            </ul>
+            <SectionHeading
+              title="Busiest hours"
+              description={`Where a second ${t.staff.toLowerCase()} would earn their keep.`}
+            />
+            <Card className="mt-4">
+              <ul className="space-y-1.5 p-4 sm:p-5">
+                {hours.map((hour) => (
+                  <li key={hour.hour_of_day} className="flex items-center gap-3 text-xs">
+                    <span className="tabular text-muted-foreground w-11 shrink-0">
+                      {String(hour.hour_of_day).padStart(2, "0")}:00
+                    </span>
+                    <span className="bg-muted h-4 grow overflow-hidden rounded-full">
+                      <span
+                        className="bg-chart-1 block h-full rounded-full"
+                        style={{ width: `${(Number(hour.bookings) / busiest) * 100}%` }}
+                      />
+                    </span>
+                    <span className="tabular w-6 shrink-0 text-right font-medium">
+                      {hour.bookings}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </section>
         </>
       )}
-    </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-neutral-200 px-4 py-3 dark:border-neutral-800">
-      <dt className="text-xs text-neutral-500">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold">{value}</dd>
-    </div>
+    </PageShell>
   );
 }

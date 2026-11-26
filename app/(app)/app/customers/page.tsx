@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ChevronDown, Search, UserRound } from "lucide-react";
+
+import { Badge, StatusBadge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Field, Input } from "@/components/ui/field";
+import { EmptyState, PageHeader, PageShell } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
@@ -96,141 +102,172 @@ export default async function CustomersPage({
   });
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.customerPlural}</h1>
-        <Link href="/app" className="text-sm underline underline-offset-4">
-          Dashboard
-        </Link>
-      </div>
+    <PageShell width="narrow">
+      <PageHeader
+        title={t.customerPlural}
+        description={`${total} ${
+          total === 1 ? t.customer.toLowerCase() : t.customerPlural.toLowerCase()
+        } on file. Open one for their recent visits and your private notes.`}
+      />
 
-      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
-        <label className="block grow">
-          <span className="text-xs text-neutral-500">Name or mobile</span>
-          <input
-            name="q"
-            defaultValue={search}
-            className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          />
-        </label>
-        <button
-          type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
-        >
-          Search
-        </button>
-      </form>
-
-      <p className="mt-4 text-xs text-neutral-500">
-        {total} {total === 1 ? t.customer.toLowerCase() : t.customerPlural.toLowerCase()}
-      </p>
+      <Card className="mt-6">
+        <form method="get" className="flex flex-wrap items-end gap-3 p-4">
+          {/* Name or phone in one box, because a receptionist with somebody at
+          the counter has one of the two and no patience for choosing. */}
+          <Field label="Name or mobile" htmlFor="q" className="grow">
+            <Input id="q" name="q" defaultValue={search} placeholder="Rahman, or 01711…" />
+          </Field>
+          <button
+            type="submit"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-4 text-sm font-medium transition-colors"
+          >
+            <Search className="size-4" aria-hidden />
+            Search
+          </button>
+        </form>
+      </Card>
 
       {customers.length === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
-          {search ? "Nobody by that name or number." : "Nobody yet."}
-        </p>
+        <EmptyState
+          className="mt-6"
+          icon={<UserRound aria-hidden />}
+          title={
+            search ? "Nobody by that name or number" : `No ${t.customerPlural.toLowerCase()} yet`
+          }
+          description={
+            search
+              ? "Check the spelling, or search by the last few digits of the mobile number."
+              : `Everyone who books — online or at the desk — is filed here automatically, with their history and your notes.`
+          }
+          action={
+            search ? (
+              <Link
+                href="/app/customers"
+                className="text-primary text-sm font-medium underline underline-offset-4"
+              >
+                Show everyone
+              </Link>
+            ) : null
+          }
+        />
       ) : (
-        <ul className="mt-4 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-          {customers.map((customer) => {
-            const visits = history.get(customer.id) ?? [];
-            const spend = visits
-              .filter((b) => b.status === "completed")
-              .reduce((sum, b) => sum + Number(b.total_price ?? 0), 0);
+        <Card className="mt-6 overflow-hidden">
+          <ul className="divide-border/70 divide-y">
+            {customers.map((customer) => {
+              const visits = history.get(customer.id) ?? [];
+              const spend = visits
+                .filter((b) => b.status === "completed")
+                .reduce((sum, b) => sum + Number(b.total_price ?? 0), 0);
 
-            return (
-              <li key={customer.id} className="px-4 py-3">
-                <details>
-                  <summary className="flex cursor-pointer items-baseline justify-between gap-4">
-                    <span>
-                      <span className="text-sm font-medium">{customer.full_name}</span>
-                      {customer.no_show_count > 0 ? (
-                        <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                          {customer.no_show_count} no-show
-                          {customer.no_show_count === 1 ? "" : "s"}
-                        </span>
-                      ) : null}
-                      <span className="mt-0.5 block text-xs text-neutral-500">
-                        {formatPhoneForDisplay(customer.phone)}
-                        {customer.email ? ` · ${customer.email}` : null}
+              return (
+                <li key={customer.id}>
+                  <details className="group">
+                    <summary className="hover:bg-muted/40 flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 transition-colors sm:px-5">
+                      <span
+                        className="bg-accent text-accent-foreground grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold"
+                        aria-hidden
+                      >
+                        {customer.full_name.trim().charAt(0).toUpperCase()}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-right text-xs text-neutral-500">
-                      {customer.total_bookings} visit
-                      {customer.total_bookings === 1 ? "" : "s"}
-                    </span>
-                  </summary>
 
-                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-xs text-neutral-500">Recent</p>
-                      {visits.length === 0 ? (
-                        <p className="mt-1 text-sm text-neutral-500">Nothing yet.</p>
-                      ) : (
-                        <ul className="mt-1 space-y-1 text-sm">
-                          {visits.map((booking) => (
-                            <li key={booking.id}>
-                              {when.format(new Date(booking.start_time))}
-                              <span className="text-neutral-500">
-                                {" "}
-                                ·{" "}
-                                {(booking.services as unknown as { name: string } | null)?.name ??
-                                  "—"}{" "}
-                                ·{" "}
-                                <span className="capitalize">
-                                  {booking.status.replace("_", " ")}
-                                </span>
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {/* Completed visits only, and only the five shown. Said
-                          plainly rather than presented as a lifetime total,
-                          because a number that looks like one and is not is
-                          worse than no number. */}
-                      {spend > 0 ? (
-                        <p className="mt-2 text-xs text-neutral-500">
-                          {money.format(spend)} across the completed visits above.
+                      <span className="min-w-0 grow">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{customer.full_name}</span>
+                          {customer.no_show_count > 0 ? (
+                            <Badge tone="warning">
+                              {customer.no_show_count} no-show
+                              {customer.no_show_count === 1 ? "" : "s"}
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <span className="text-muted-foreground mt-0.5 block truncate text-xs">
+                          {formatPhoneForDisplay(customer.phone)}
+                          {customer.email ? ` · ${customer.email}` : null}
+                        </span>
+                      </span>
+
+                      <span className="text-muted-foreground shrink-0 text-right text-xs">
+                        <span className="tabular block font-medium">{customer.total_bookings}</span>
+                        visit{customer.total_bookings === 1 ? "" : "s"}
+                      </span>
+
+                      <ChevronDown
+                        className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180"
+                        aria-hidden
+                      />
+                    </summary>
+
+                    <div className="bg-muted/25 grid gap-5 px-4 py-4 sm:grid-cols-2 sm:px-5">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                          Recent
                         </p>
-                      ) : null}
-                    </div>
+                        {visits.length === 0 ? (
+                          <p className="text-muted-foreground mt-2 text-sm">Nothing yet.</p>
+                        ) : (
+                          <ul className="mt-2 space-y-1.5 text-sm">
+                            {visits.map((booking) => (
+                              <li key={booking.id} className="flex items-center gap-2">
+                                <span className="tabular shrink-0">
+                                  {when.format(new Date(booking.start_time))}
+                                </span>
+                                <span className="text-muted-foreground min-w-0 grow truncate">
+                                  {(booking.services as unknown as { name: string } | null)?.name ??
+                                    "—"}
+                                </span>
+                                <StatusBadge status={booking.status} className="shrink-0" />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {/* Completed visits only, and only the five shown. Said
+                   plainly rather than presented as a lifetime total,
+                   because a number that looks like one and is not is
+                   worse than no number. */}
+                        {spend > 0 ? (
+                          <p className="text-muted-foreground mt-3 text-xs">
+                            {money.format(spend)} across the completed visits above.
+                          </p>
+                        ) : null}
+                      </div>
 
-                    <CustomerNotes customerId={customer.id} notes={customer.notes ?? ""} />
-                  </div>
-                </details>
-              </li>
-            );
-          })}
-        </ul>
+                      <CustomerNotes customerId={customer.id} notes={customer.notes ?? ""} />
+                    </div>
+                  </details>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
 
       {total > pageSize ? (
-        <nav className="mt-6 flex items-center justify-between text-sm">
+        <nav className="mt-6 flex items-center justify-between gap-3">
           {page > 1 ? (
             <Link
               href={`/app/customers?${new URLSearchParams({ ...(search ? { q: search } : {}), page: String(page - 1) })}`}
-              className="underline underline-offset-4"
+              className="border-border bg-card hover:border-primary/40 hover:text-primary rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
             >
               Previous
             </Link>
           ) : (
-            <span className="text-neutral-300 dark:text-neutral-700">Previous</span>
+            <span className="text-muted-foreground/50 px-3 py-2 text-sm">Previous</span>
           )}
-          <span className="text-xs text-neutral-500">
+          <span className="text-muted-foreground text-xs">
             Page {page} of {Math.ceil(total / pageSize)}
           </span>
           {page * pageSize < total ? (
             <Link
               href={`/app/customers?${new URLSearchParams({ ...(search ? { q: search } : {}), page: String(page + 1) })}`}
-              className="underline underline-offset-4"
+              className="border-border bg-card hover:border-primary/40 hover:text-primary rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
             >
               Next
             </Link>
           ) : (
-            <span className="text-neutral-300 dark:text-neutral-700">Next</span>
+            <span className="text-muted-foreground/50 px-3 py-2 text-sm">Next</span>
           )}
         </nav>
       ) : null}
-    </main>
+    </PageShell>
   );
 }

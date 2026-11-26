@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { inputClass } from "@/components/ui/field";
 import { tryNormalisePhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/client";
 import { INDUSTRIES, INDUSTRY_LABELS, terminologyFor, type Industry } from "@/lib/terminology";
@@ -84,9 +85,11 @@ export function SignupForm({ resume }: { resume: boolean }) {
         return;
       }
 
-      // The account exists but this browser has no session yet: the API route
-      // runs as the service role and deliberately does not mint one. Sign in
-      // with the credentials just used, so the wizard opens signed in.
+      // The route signs the owner up with the publishable key and sets the
+      // session cookie on its own response, so this browser is usually
+      // signed in already. Signing in again is the belt to that braces: it
+      // costs one request and covers the case where the cookie did not
+      // survive the redirect.
       const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -112,7 +115,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Create your business</h1>
-        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-muted-foreground mt-2 text-sm">
           {resume
             ? "Your account exists but has no business yet. Finish setting it up below."
             : "Takes about two minutes. You can change any of it later."}
@@ -122,7 +125,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
       {error ? (
         <p
           role="alert"
-          className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400"
+          className="bg-destructive/10 text-destructive ring-destructive/20 rounded-lg px-3 py-2 text-sm ring-1 ring-inset"
         >
           {error}
         </p>
@@ -131,7 +134,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
       {notice ? (
         <p
           role="status"
-          className="rounded-md bg-blue-500/10 px-3 py-2 text-sm text-blue-800 dark:text-blue-300"
+          className="bg-accent text-accent-foreground ring-primary/20 rounded-lg px-3 py-2 text-sm ring-1 ring-inset"
         >
           {notice}
         </p>
@@ -151,7 +154,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
             </option>
           ))}
         </select>
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="bg-accent text-accent-foreground mt-2 rounded-lg px-3 py-2 text-xs">
           Your screens will say <strong>{labels.customer}</strong>, <strong>{labels.staff}</strong>{" "}
           and <strong>{labels.booking}</strong>.
         </p>
@@ -184,7 +187,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
 
       <input type="hidden" name="timezone" value="Asia/Dhaka" />
 
-      <hr className="border-neutral-200 dark:border-neutral-800" />
+      <hr className="border-border" />
 
       <Field label="Your name" htmlFor="ownerName">
         <input
@@ -229,14 +232,14 @@ export function SignupForm({ resume }: { resume: boolean }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors disabled:opacity-50"
       >
         {pending ? "Creating…" : "Create business"}
       </button>
 
-      <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-muted-foreground text-center text-sm">
         Already have an account?{" "}
-        <a href="/login" className="underline">
+        <a href="/login" className="text-primary font-medium underline underline-offset-4">
           Sign in
         </a>
       </p>
@@ -244,8 +247,7 @@ export function SignupForm({ resume }: { resume: boolean }) {
   );
 }
 
-const controlClass =
-  "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-400";
+const controlClass = inputClass;
 
 function Field({
   label,
@@ -266,7 +268,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && !error ? <p className="mt-1.5 text-xs text-neutral-500">{hint}</p> : null}
+      {hint && !error ? <p className="text-muted-foreground mt-1.5 text-xs">{hint}</p> : null}
       {error ? <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{error}</p> : null}
     </div>
   );

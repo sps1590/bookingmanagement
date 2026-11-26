@@ -44,7 +44,7 @@ export default async function StaffAvailability() {
   if (!me) {
     return (
       <main className="mx-auto max-w-xl px-5 py-10">
-        <p className="rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="border-border bg-muted/30 text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
           Your login is not linked to a {member.terminology.staff.toLowerCase()} record yet. An
           owner can link it under Settings.
         </p>
@@ -79,17 +79,17 @@ export default async function StaffAvailability() {
       <section className="mt-6">
         <h2 className="text-sm font-medium tracking-wide uppercase">My week</h2>
         {(rules ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">
+          <p className="text-muted-foreground mt-2 text-sm">
             No hours set, so nothing can be booked with you. Ask an owner to set them.
           </p>
         ) : (
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
             {(rules ?? []).map((rule) => (
               <li key={rule.id} className="px-4 py-2">
                 <span className="inline-block w-24 font-medium">{DAYS[rule.day_of_week]}</span>
                 {rule.start_time.slice(0, 5)} – {rule.end_time.slice(0, 5)}
                 {rule.is_break ? (
-                  <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] dark:bg-neutral-800">
+                  <span className="bg-muted text-muted-foreground ml-2 rounded px-1.5 py-0.5 text-[11px]">
                     break
                   </span>
                 ) : null}
@@ -97,7 +97,7 @@ export default async function StaffAvailability() {
             ))}
           </ul>
         )}
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-2 text-xs">
           Read-only. Ask an owner or manager to change these.
         </p>
       </section>
@@ -106,24 +106,24 @@ export default async function StaffAvailability() {
         <h2 className="text-sm font-medium tracking-wide uppercase">Time off</h2>
 
         {(leave ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">Nothing requested.</p>
+          <p className="text-muted-foreground mt-2 text-sm">Nothing requested.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
             {(leave ?? []).map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-3 px-4 py-2">
                 <span>
                   <span className="font-medium">{entry.override_date}</span>
                   {entry.reason ? (
-                    <span className="text-neutral-500"> · {entry.reason}</span>
+                    <span className="text-muted-foreground"> · {entry.reason}</span>
                   ) : null}
                 </span>
                 <span
                   className={
                     entry.status === "approved"
-                      ? "text-xs text-green-700 dark:text-green-500"
+                      ? "text-success text-xs"
                       : entry.status === "rejected"
-                        ? "text-xs text-neutral-400 line-through"
-                        : "text-xs text-amber-700 dark:text-amber-500"
+                        ? "text-muted-foreground/70 text-xs line-through"
+                        : "text-destructive text-xs"
                   }
                 >
                   {entry.status}
@@ -135,7 +135,7 @@ export default async function StaffAvailability() {
 
         <LeaveRequest staffId={me.id} businessId={member.businessId} minDate={today} />
 
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-2 text-xs">
           A request changes nothing until it is approved — your calendar stays open until then.
         </p>
       </section>

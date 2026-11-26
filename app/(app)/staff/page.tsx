@@ -37,9 +37,9 @@ export default async function StaffToday() {
     .from("bookings")
     .select(
       `id, booking_code, status, start_time, end_time, customer_notes,
-       customers (full_name, phone, notes),
-       services (name, duration_minutes),
-       staff_resources (name)`,
+     customers (full_name, phone, notes),
+     services (name, duration_minutes),
+     staff_resources (name)`,
     )
     .gte("start_time", start)
     .lt("start_time", end)
@@ -71,14 +71,14 @@ export default async function StaffToday() {
           My hours
         </Link>
       </div>
-      <p className="mt-1 text-xs text-neutral-500">
+      <p className="text-muted-foreground mt-1 text-xs">
         {bookings.length}{" "}
         {bookings.length === 1 ? t.booking.toLowerCase() : t.bookingPlural.toLowerCase()}
         {bookings.length > 0 ? ` · ${done} done` : null} · {member.timezone}
       </p>
 
       {bookings.length === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-12 text-center text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="text-muted-foreground mt-8 rounded-md border border-dashed border-neutral-300 px-4 py-12 text-center text-sm dark:border-neutral-700">
           Nothing booked today.
         </p>
       ) : (
@@ -100,13 +100,13 @@ export default async function StaffToday() {
                   <span className="text-lg font-semibold tabular-nums">
                     {clock.format(new Date(booking.start_time))}
                   </span>
-                  <span className="text-xs text-neutral-500 capitalize">
+                  <span className="text-muted-foreground text-xs capitalize">
                     {booking.status.replace("_", " ")}
                   </span>
                 </div>
 
                 <p className="mt-1 text-sm font-medium">{customer?.full_name ?? "—"}</p>
-                <p className="text-xs text-neutral-500">{service?.name ?? "—"}</p>
+                <p className="text-muted-foreground text-xs">{service?.name ?? "—"}</p>
 
                 {customer?.phone ? (
                   <a
@@ -118,14 +118,14 @@ export default async function StaffToday() {
                 ) : null}
 
                 {/* The notes a provider needs to see before the person sits
-                    down — an allergy is useless on a screen nobody opens. */}
+              down — an allergy is useless on a screen nobody opens. */}
                 {customer?.notes && customer.notes !== booking.customer_notes ? (
                   <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
                     {customer.notes}
                   </p>
                 ) : null}
                 {booking.customer_notes ? (
-                  <p className="mt-1 text-xs text-neutral-500">{booking.customer_notes}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">{booking.customer_notes}</p>
                 ) : null}
 
                 <div className="mt-3">

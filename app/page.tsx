@@ -86,9 +86,9 @@ function Hero() {
   return (
     <section className="relative overflow-hidden bg-slate-950">
       {/* Aurora. Blurred gradient blobs rather than an image: nothing to
-          download, nothing to go blurry on a high-density screen, and it
-          costs no bandwidth on the mobile data most of these visitors are
-          using. */}
+       download, nothing to go blurry on a high-density screen, and it
+       costs no bandwidth on the mobile data most of these visitors are
+       using. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 left-1/4 h-[32rem] w-[32rem] rounded-full bg-indigo-500/25 blur-[120px]" />
         <div className="absolute top-10 -right-20 h-[28rem] w-[28rem] rounded-full bg-sky-400/20 blur-[120px]" />

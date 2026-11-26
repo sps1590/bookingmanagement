@@ -40,9 +40,9 @@ export default async function PrintSheet({
     .from("bookings")
     .select(
       `booking_code, start_time, status,
-       customers (full_name, phone),
-       services (name),
-       staff_resources (id, name)`,
+     customers (full_name, phone),
+     services (name),
+     staff_resources (id, name)`,
     )
     .eq("business_id", member.businessId)
     .gte("start_time", start)
@@ -78,22 +78,24 @@ export default async function PrintSheet({
   return (
     <main className="mx-auto max-w-3xl px-6 py-8 print:px-0 print:py-0">
       <style>{`
-        @media print {
-          @page { size: A4 portrait; margin: 14mm; }
-          .no-print { display: none !important; }
-          /* A provider's list must not break across pages mid-column; a sheet
-             where Dr Rahman's afternoon is on page two is a sheet somebody
-             loses. */
-          section { break-inside: avoid; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-      `}</style>
+      @media print {
+       @page { size: A4 portrait; margin: 14mm; }
+       .no-print { display: none !important; }
+       /* A provider's list must not break across pages mid-column; a sheet
+         where Dr Rahman's afternoon is on page two is a sheet somebody
+         loses. */
+       section { break-inside: avoid; }
+       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    `}</style>
 
       <div className="no-print mb-6 flex items-center justify-between gap-3">
         <a href="/app/bookings" className="text-sm underline underline-offset-4">
           Back
         </a>
-        <span className="text-xs text-neutral-500">Use your browser&rsquo;s print dialogue.</span>
+        <span className="text-muted-foreground text-xs">
+          Use your browser&rsquo;s print dialogue.
+        </span>
       </div>
 
       <header className="border-b border-neutral-300 pb-3">
@@ -139,7 +141,7 @@ export default async function PrintSheet({
                         {(booking.services as unknown as { name: string } | null)?.name ?? "—"}
                       </td>
                       {/* Left blank on purpose: this is the column somebody
-                          writes in with a pen. */}
+                  writes in with a pen. */}
                       <td className="py-1.5" />
                     </tr>
                   );

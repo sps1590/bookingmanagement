@@ -44,12 +44,17 @@ export function ActionForm({
     <form ref={formRef} action={formAction} className={className}>
       {children}
       {state.error ? (
-        <p role="alert" className="mt-2 text-xs text-amber-700 dark:text-amber-500">
+        <p
+          role="alert"
+          className="bg-destructive/10 text-destructive mt-3 rounded-lg px-3 py-2 text-sm"
+        >
           {state.error}
         </p>
       ) : null}
       {state.ok ? (
-        <p className="mt-2 text-xs text-green-700 dark:text-green-500">{state.ok}</p>
+        <p role="status" className="text-success mt-3 text-sm font-medium">
+          {state.ok}
+        </p>
       ) : null}
     </form>
   );
@@ -64,8 +69,8 @@ export function Submit({ label, subtle = false }: { label: string; subtle?: bool
       disabled={pending}
       className={
         subtle
-          ? "rounded border border-neutral-200 px-2 py-1 text-xs disabled:opacity-50 dark:border-neutral-700"
-          : "rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+          ? "border-border bg-card hover:border-primary/40 hover:text-primary min-h-8 rounded-lg border px-3 text-xs font-medium transition-colors disabled:opacity-50"
+          : "bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors disabled:opacity-50"
       }
     >
       {pending ? "Saving…" : label}

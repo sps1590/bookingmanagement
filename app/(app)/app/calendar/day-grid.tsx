@@ -126,7 +126,7 @@ export function DayGrid({
 
   if (staff.length === 0) {
     return (
-      <p className="mt-6 rounded-md border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700">
+      <p className="border-border bg-muted/30 text-muted-foreground mt-6 rounded-xl border border-dashed px-4 py-10 text-center text-sm">
         No providers yet. Add one under Settings.
       </p>
     );
@@ -137,7 +137,7 @@ export function DayGrid({
       {problem ? (
         <p
           role="alert"
-          className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          className="bg-warning/15 text-warning-foreground ring-warning/30 dark:text-warning mt-4 rounded-lg px-4 py-2 text-sm ring-1 ring-inset"
         >
           {problem}
         </p>
@@ -145,15 +145,15 @@ export function DayGrid({
 
       <div className="mt-4 overflow-x-auto">
         <div
-          className="grid min-w-[640px] border border-neutral-200 dark:border-neutral-800"
+          className="border-border bg-card elevated grid min-w-[640px] overflow-hidden rounded-xl border"
           style={{ gridTemplateColumns: `4rem repeat(${staff.length}, minmax(10rem, 1fr))` }}
         >
           {/* Header */}
-          <div className="sticky top-0 border-b border-neutral-200 bg-neutral-50 p-2 text-xs dark:border-neutral-800 dark:bg-neutral-900" />
+          <div className="border-border bg-muted/60 sticky top-0 border-b p-2 text-xs backdrop-blur" />
           {staff.map((person) => (
             <div
               key={person.id}
-              className="sticky top-0 truncate border-b border-l border-neutral-200 bg-neutral-50 p-2 text-xs font-medium dark:border-neutral-800 dark:bg-neutral-900"
+              className="border-border bg-muted/60 sticky top-0 truncate border-b border-l p-2 text-xs font-semibold backdrop-blur"
             >
               {person.name}
             </div>
@@ -164,7 +164,7 @@ export function DayGrid({
             {Array.from({ length: closeHour - openHour }, (_, i) => (
               <div
                 key={i}
-                className="absolute right-2 -translate-y-1/2 text-[10px] text-neutral-400"
+                className="text-muted-foreground/70 tabular absolute right-2 -translate-y-1/2 text-[10px]"
                 style={{ top: `${i * 4 * SLOT_REM}rem` }}
               >
                 {String(openHour + i).padStart(2, "0")}:00
@@ -173,13 +173,13 @@ export function DayGrid({
           </div>
 
           {/* One positioned container per provider: drop targets underneath,
-              appointment cards on top. An appointment is not one slot long, so
-              putting cards inside cells would split them across rows and lose
-              which row owns them. */}
+          appointment cards on top. An appointment is not one slot long, so
+          putting cards inside cells would split them across rows and lose
+          which row owns them. */}
           {staff.map((person) => (
             <div
               key={person.id}
-              className="relative border-l border-neutral-200 dark:border-neutral-800"
+              className="border-border relative border-l"
               style={{ height: `${rows * SLOT_REM}rem` }}
             >
               {Array.from({ length: rows }, (_, row) => (
@@ -188,8 +188,8 @@ export function DayGrid({
                   onDragOver={canMove ? (e) => e.preventDefault() : undefined}
                   onDrop={canMove ? () => void drop(row, person.id) : undefined}
                   className={`absolute inset-x-0 ${
-                    row % 4 === 0 ? "border-t border-neutral-200 dark:border-neutral-800" : ""
-                  } ${dragging ? "hover:bg-neutral-100 dark:hover:bg-neutral-900" : ""}`}
+                    row % 4 === 0 ? "border-border border-t" : ""
+                  } ${dragging ? "hover:bg-accent" : ""}`}
                   style={{ top: `${row * SLOT_REM}rem`, height: `${SLOT_REM}rem` }}
                 />
               ))}
@@ -210,7 +210,7 @@ export function DayGrid({
                       onDragStart={() => setDragging(booking.id)}
                       onDragEnd={() => setDragging(null)}
                       title={`${booking.code} · ${booking.customer} · ${booking.service} · ${booking.status.replace("_", " ")}`}
-                      className="absolute inset-x-1 cursor-grab overflow-hidden rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[11px] shadow-sm dark:border-neutral-700 dark:bg-neutral-900"
+                      className="border-border bg-card elevated absolute inset-x-1 cursor-grab overflow-hidden rounded-lg border px-1.5 py-1 text-[11px]"
                       style={{
                         top: `${(top / SLOT_MINUTES) * SLOT_REM}rem`,
                         height: `${(height / SLOT_MINUTES) * SLOT_REM}rem`,
@@ -220,7 +220,9 @@ export function DayGrid({
                       }}
                     >
                       <span className="block truncate font-medium">{booking.customer}</span>
-                      <span className="block truncate text-neutral-500">{booking.service}</span>
+                      <span className="text-muted-foreground block truncate">
+                        {booking.service}
+                      </span>
                     </div>
                   );
                 })}
@@ -230,12 +232,12 @@ export function DayGrid({
       </div>
 
       {canMove ? (
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-3 text-xs">
           Drag a card to move it. The appointment only moves once the server accepts it, so a
           refused move leaves it exactly where it was.
         </p>
       ) : (
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-3 text-xs">
           Your role can view the day but not move appointments.
         </p>
       )}

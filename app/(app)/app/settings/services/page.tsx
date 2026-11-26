@@ -1,3 +1,7 @@
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { hintClass, inputClass, labelClass } from "@/components/ui/field";
+import { SectionHeading } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,104 +42,115 @@ export default async function ServicesSettings() {
   });
 
   return (
-    <div className="mt-8 space-y-10">
+    <div className="mt-8 space-y-12">
       <section>
-        <h2 className="text-sm font-medium tracking-wide uppercase">What you offer</h2>
+        <SectionHeading
+          title="What you offer"
+          description="Open a service to change its price, length or the gaps held around it."
+        />
 
         {services.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">Nothing yet. Add your first below.</p>
+          <p className="text-muted-foreground mt-3 text-sm">Nothing yet. Add your first below.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-            {services.map((service) => (
-              <li key={service.id} className="px-4 py-3">
-                <details>
-                  <summary className="flex cursor-pointer items-baseline justify-between gap-4">
-                    <span>
-                      <span className="text-sm font-medium">{service.name}</span>
-                      <span className="mt-0.5 block text-xs text-neutral-500">
-                        {service.duration_minutes} min
-                        {service.buffer_before_minutes || service.buffer_after_minutes
-                          ? ` · gaps ${service.buffer_before_minutes}/${service.buffer_after_minutes} min`
-                          : null}
-                        {service.is_active ? null : " · not offered online"}
+          <Card className="mt-4 overflow-hidden">
+            <ul className="divide-border/70 divide-y">
+              {services.map((service) => (
+                <li key={service.id}>
+                  <details className="group">
+                    <summary className="hover:bg-muted/40 flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors sm:px-5">
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{service.name}</span>
+                          {service.is_active ? null : <Badge tone="neutral">Hidden online</Badge>}
+                        </span>
+                        <span className="text-muted-foreground mt-0.5 block text-xs">
+                          {service.duration_minutes} min
+                          {service.buffer_before_minutes || service.buffer_after_minutes
+                            ? ` · gaps ${service.buffer_before_minutes}/${service.buffer_after_minutes} min`
+                            : null}
+                        </span>
                       </span>
-                    </span>
-                    <span className="shrink-0 text-sm font-medium">
-                      {service.price > 0 ? money.format(service.price) : "—"}
-                    </span>
-                  </summary>
+                      <span className="tabular shrink-0 text-sm font-semibold">
+                        {service.price > 0 ? money.format(service.price) : "—"}
+                      </span>
+                    </summary>
+                    <div className="bg-muted/25 px-4 py-4 sm:px-5">
+                      <ActionForm action={saveService} className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <input type="hidden" name="id" value={service.id} />
+                        <Field label="Name" name="name" defaultValue={service.name} required />
+                        <Field
+                          label="Minutes"
+                          name="durationMinutes"
+                          type="number"
+                          defaultValue={String(service.duration_minutes)}
+                          required
+                        />
+                        <Field
+                          label="Gap before (min)"
+                          name="bufferBefore"
+                          type="number"
+                          defaultValue={String(service.buffer_before_minutes)}
+                          hint="Setting-up time held before the appointment."
+                        />
+                        <Field
+                          label="Gap after (min)"
+                          name="bufferAfter"
+                          type="number"
+                          defaultValue={String(service.buffer_after_minutes)}
+                          hint="Clean-up time held after it. Existing bookings keep the gaps they were made with."
+                        />
+                        <Field
+                          label="Price"
+                          name="price"
+                          type="number"
+                          defaultValue={String(service.price)}
+                        />
+                        <Field
+                          label="Deposit"
+                          name="depositRequired"
+                          type="number"
+                          defaultValue={String(service.deposit_required)}
+                        />
+                        <Field
+                          label="Colour"
+                          name="colorHex"
+                          type="color"
+                          defaultValue={service.color_hex}
+                        />
+                        <div className="sm:col-span-2">
+                          <Submit label="Save" />
+                        </div>
+                      </ActionForm>
 
-                  <ActionForm action={saveService} className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <input type="hidden" name="id" value={service.id} />
-                    <Field label="Name" name="name" defaultValue={service.name} required />
-                    <Field
-                      label="Minutes"
-                      name="durationMinutes"
-                      type="number"
-                      defaultValue={String(service.duration_minutes)}
-                      required
-                    />
-                    <Field
-                      label="Gap before (min)"
-                      name="bufferBefore"
-                      type="number"
-                      defaultValue={String(service.buffer_before_minutes)}
-                      hint="Setting-up time held before the appointment."
-                    />
-                    <Field
-                      label="Gap after (min)"
-                      name="bufferAfter"
-                      type="number"
-                      defaultValue={String(service.buffer_after_minutes)}
-                      hint="Clean-up time held after it. Existing bookings keep the gaps they were made with."
-                    />
-                    <Field
-                      label="Price"
-                      name="price"
-                      type="number"
-                      defaultValue={String(service.price)}
-                    />
-                    <Field
-                      label="Deposit"
-                      name="depositRequired"
-                      type="number"
-                      defaultValue={String(service.deposit_required)}
-                    />
-                    <Field
-                      label="Colour"
-                      name="colorHex"
-                      type="color"
-                      defaultValue={service.color_hex}
-                    />
-                    <div className="sm:col-span-2">
-                      <Submit label="Save" />
+                      {/* Not a delete. Bookings reference services ON DELETE
+               RESTRICT, so removing one would either fail or take a
+               patient's history with it. */}
+                      <ActionForm action={setServiceActive} className="mt-3">
+                        <input type="hidden" name="id" value={service.id} />
+                        <input type="hidden" name="active" value={String(!service.is_active)} />
+                        <Submit
+                          subtle
+                          label={service.is_active ? "Stop offering online" : "Offer online again"}
+                        />
+                      </ActionForm>
                     </div>
-                  </ActionForm>
-
-                  {/* Not a delete. Bookings reference services ON DELETE
-                      RESTRICT, so removing one would either fail or take a
-                      patient's history with it. */}
-                  <ActionForm action={setServiceActive} className="mt-3">
-                    <input type="hidden" name="id" value={service.id} />
-                    <input type="hidden" name="active" value={String(!service.is_active)} />
-                    <Submit
-                      subtle
-                      label={service.is_active ? "Stop offering online" : "Offer online again"}
-                    />
-                  </ActionForm>
-                </details>
-              </li>
-            ))}
-          </ul>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
 
       <section>
-        <h2 className="text-sm font-medium tracking-wide uppercase">Add a service</h2>
+        <SectionHeading
+          title="Add a service"
+          description="It appears on your booking page as soon as a provider is set to perform it."
+        />
         <ActionForm
           action={saveService}
           resetOnSuccess
-          className="mt-3 grid gap-3 rounded-md border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="bg-card border-border/70 elevated mt-4 grid gap-3 rounded-xl border p-4 sm:grid-cols-2 sm:p-5"
         >
           <Field label="Name" name="name" required />
           <Field label="Minutes" name="durationMinutes" type="number" defaultValue="30" required />
@@ -169,17 +184,17 @@ function Field({
   hint?: string;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs text-neutral-500">{label}</span>
+    <label className="block space-y-1.5">
+      <span className={labelClass}>{label}</span>
       <input
         name={name}
         type={type}
         defaultValue={defaultValue}
         required={required}
         step={type === "number" ? "any" : undefined}
-        className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+        className={type === "color" ? `${inputClass} h-10 p-1` : inputClass}
       />
-      {hint ? <span className="mt-1 block text-[11px] text-neutral-400">{hint}</span> : null}
+      {hint ? <span className={`${hintClass} block`}>{hint}</span> : null}
     </label>
   );
 }

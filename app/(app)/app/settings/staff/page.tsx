@@ -1,3 +1,7 @@
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { hintClass, inputClass, labelClass } from "@/components/ui/field";
+import { SectionHeading } from "@/components/ui/page";
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -47,83 +51,101 @@ export default async function StaffSettings() {
   const t = member.terminology;
 
   return (
-    <div className="mt-8 space-y-10">
+    <div className="mt-8 space-y-12">
       <section>
-        <h2 className="text-sm font-medium tracking-wide uppercase">{t.staffPlural}</h2>
+        <SectionHeading
+          title={t.staffPlural}
+          description="Add as many as you like. There is no limit on how many people a business can have."
+        />
 
         {people.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">
+          <p className="text-muted-foreground mt-3 text-sm">
             Nobody yet. Add someone below — until there is at least one person with working hours,
             nothing can be booked.
           </p>
         ) : (
-          <ul className="mt-3 space-y-4">
+          <ul className="mt-4 space-y-3">
             {people.map((person) => {
               const ticked = catalogue.filter((s) => mapped.has(`${person.id}:${s.id}`));
 
               return (
-                <li
-                  key={person.id}
-                  className="rounded-md border border-neutral-200 px-4 py-3 dark:border-neutral-800"
-                >
-                  <div className="flex items-baseline justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">{person.name}</p>
-                      {person.title ? (
-                        <p className="text-xs text-neutral-500">{person.title}</p>
-                      ) : null}
+                <li key={person.id}>
+                  <Card className="px-4 py-3.5 sm:px-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="bg-accent text-accent-foreground grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold"
+                          aria-hidden
+                        >
+                          {person.name.trim().charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{person.name}</p>
+                          {person.title ? (
+                            <p className="text-muted-foreground truncate text-xs">{person.title}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      {ticked.length === 0 ? (
+                        <Badge tone="warning">No services — not bookable</Badge>
+                      ) : (
+                        <Badge tone="success">
+                          {ticked.length} service{ticked.length === 1 ? "" : "s"}
+                        </Badge>
+                      )}
                     </div>
-                    <p className="shrink-0 text-xs text-neutral-500">
-                      {ticked.length === 0
-                        ? "No services — not bookable"
-                        : `${ticked.length} service${ticked.length === 1 ? "" : "s"}`}
-                    </p>
-                  </div>
 
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-xs underline underline-offset-4">
-                      Edit
-                    </summary>
+                    <details className="group mt-3">
+                      <summary className="text-primary cursor-pointer list-none text-xs font-medium underline-offset-4 hover:underline">
+                        Edit details and services
+                      </summary>
 
-                    <ActionForm action={saveStaff} className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <input type="hidden" name="id" value={person.id} />
-                      <Field label="Name" name="name" defaultValue={person.name} required />
-                      <Field label="Title" name="title" defaultValue={person.title ?? ""} />
-                      <Field label="Phone" name="phone" defaultValue={person.phone ?? ""} />
-                      <Field label="Email" name="email" defaultValue={person.email ?? ""} />
-                      <div className="sm:col-span-2">
-                        <Submit label="Save" />
-                      </div>
-                    </ActionForm>
+                      <ActionForm action={saveStaff} className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <input type="hidden" name="id" value={person.id} />
+                        <Field label="Name" name="name" defaultValue={person.name} required />
+                        <Field label="Title" name="title" defaultValue={person.title ?? ""} />
+                        <Field label="Phone" name="phone" defaultValue={person.phone ?? ""} />
+                        <Field label="Email" name="email" defaultValue={person.email ?? ""} />
+                        <div className="sm:col-span-2">
+                          <Submit label="Save" />
+                        </div>
+                      </ActionForm>
 
-                    <ActionForm action={setStaffServices} className="mt-4">
-                      <input type="hidden" name="staffId" value={person.id} />
-                      <p className="text-xs text-neutral-500">Performs</p>
-                      <div className="mt-2 flex flex-wrap gap-3">
-                        {catalogue.length === 0 ? (
-                          <span className="text-xs text-neutral-400">Add a service first.</span>
-                        ) : (
-                          catalogue.map((service) => (
-                            <label key={service.id} className="flex items-center gap-1.5 text-sm">
-                              <input
-                                type="checkbox"
-                                name="serviceId"
-                                value={service.id}
-                                defaultChecked={mapped.has(`${person.id}:${service.id}`)}
-                              />
-                              {service.name}
-                              {service.is_active ? null : (
-                                <span className="text-[11px] text-neutral-400">(not offered)</span>
-                              )}
-                            </label>
-                          ))
-                        )}
-                      </div>
-                      <div className="mt-3">
-                        <Submit subtle label="Save services" />
-                      </div>
-                    </ActionForm>
-                  </details>
+                      <ActionForm action={setStaffServices} className="mt-4">
+                        <input type="hidden" name="staffId" value={person.id} />
+                        <p className={labelClass}>Performs</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {catalogue.length === 0 ? (
+                            <span className={hintClass}>Add a service first.</span>
+                          ) : (
+                            catalogue.map((service) => (
+                              <label
+                                key={service.id}
+                                className="border-border bg-card hover:border-primary/40 has-checked:border-primary has-checked:bg-accent has-checked:text-accent-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  name="serviceId"
+                                  value={service.id}
+                                  defaultChecked={mapped.has(`${person.id}:${service.id}`)}
+                                  className="accent-primary size-4"
+                                />
+                                {service.name}
+                                {service.is_active ? null : (
+                                  <span className="text-muted-foreground text-[11px]">
+                                    (not offered)
+                                  </span>
+                                )}
+                              </label>
+                            ))
+                          )}
+                        </div>
+                        <div className="mt-3">
+                          <Submit subtle label="Save services" />
+                        </div>
+                      </ActionForm>
+                    </details>
+                  </Card>
                 </li>
               );
             })}
@@ -132,11 +154,14 @@ export default async function StaffSettings() {
       </section>
 
       <section>
-        <h2 className="text-sm font-medium tracking-wide uppercase">Add someone</h2>
+        <SectionHeading
+          title="Add someone"
+          description="Contact details stay inside your team — the public booking page has no column for them."
+        />
         <ActionForm
           action={saveStaff}
           resetOnSuccess
-          className="mt-3 grid gap-3 rounded-md border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="bg-card border-border/70 elevated mt-4 grid gap-3 rounded-xl border p-4 sm:grid-cols-2 sm:p-5"
         >
           <Field label="Name" name="name" required />
           <Field label="Title" name="title" />
@@ -146,7 +171,7 @@ export default async function StaffSettings() {
             <Submit label={`Add ${t.staff.toLowerCase()}`} />
           </div>
         </ActionForm>
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="text-muted-foreground mt-3 text-sm">
           Then tick their services above and set their hours under Opening hours. All three are
           needed before anyone can book them.
         </p>
@@ -169,15 +194,10 @@ function Field({
   hint?: string;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs text-neutral-500">{label}</span>
-      <input
-        name={name}
-        defaultValue={defaultValue}
-        required={required}
-        className="mt-1 w-full rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-      />
-      {hint ? <span className="mt-1 block text-[11px] text-neutral-400">{hint}</span> : null}
+    <label className="block space-y-1.5">
+      <span className={labelClass}>{label}</span>
+      <input name={name} defaultValue={defaultValue} required={required} className={inputClass} />
+      {hint ? <span className={`${hintClass} block`}>{hint}</span> : null}
     </label>
   );
 }

@@ -46,9 +46,9 @@ export default async function LeaveSettings() {
         <h2 className="text-sm font-medium tracking-wide uppercase">Waiting on you</h2>
 
         {pending.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">Nothing to decide.</p>
+          <p className="text-muted-foreground mt-2 text-sm">Nothing to decide.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
             {pending.map((request) => (
               <li
                 key={request.id}
@@ -58,9 +58,9 @@ export default async function LeaveSettings() {
                   <span className="font-medium">
                     {request.staff_id ? (nameOf.get(request.staff_id) ?? "—") : "—"}
                   </span>
-                  <span className="text-neutral-500"> · {request.override_date}</span>
+                  <span className="text-muted-foreground"> · {request.override_date}</span>
                   {request.reason ? (
-                    <span className="block text-xs text-neutral-500">{request.reason}</span>
+                    <span className="text-muted-foreground block text-xs">{request.reason}</span>
                   ) : null}
                 </span>
 
@@ -85,20 +85,20 @@ export default async function LeaveSettings() {
       {decided.length > 0 ? (
         <section>
           <h2 className="text-sm font-medium tracking-wide uppercase">Already decided</h2>
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-border/70 border-border bg-card elevated mt-2 divide-y overflow-hidden rounded-xl border text-sm">
             {decided.map((request) => (
               <li key={request.id} className="flex items-center justify-between gap-3 px-4 py-2">
                 <span>
                   <span className="font-medium">
                     {request.staff_id ? (nameOf.get(request.staff_id) ?? "—") : "—"}
                   </span>
-                  <span className="text-neutral-500"> · {request.override_date}</span>
+                  <span className="text-muted-foreground"> · {request.override_date}</span>
                 </span>
                 <span
                   className={
                     request.status === "approved"
-                      ? "text-xs text-green-700 dark:text-green-500"
-                      : "text-xs text-neutral-400"
+                      ? "text-success text-xs"
+                      : "text-muted-foreground/70 text-xs"
                   }
                 >
                   {request.status}
