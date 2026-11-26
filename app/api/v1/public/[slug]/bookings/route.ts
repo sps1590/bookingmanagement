@@ -6,7 +6,7 @@ import { LIMITS, clientIp, enforceRateLimit } from "@/lib/api/rate-limit";
 import { created } from "@/lib/api/response";
 import { logger } from "@/lib/logger";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
-import { requirePublicTenant } from "@/lib/public/tenant";
+import { requirePublicBusiness } from "@/lib/public/tenant";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -53,7 +53,11 @@ export const POST = route(
     const ip = clientIp(request);
     await enforceRateLimit(`book:ip:${ip}`, LIMITS.bookingsPerIp);
 
-    const { business } = await requirePublicTenant(slug);
+    // The business row alone. This used to call the full tenant loader, which
+    // fetches every service, every provider and every branch — to read an id
+    // and a timezone, at the single moment a customer is waiting to find out
+    // whether they got the appointment.
+    const business = await requirePublicBusiness(slug);
 
     // Normalised before it reaches the database, because `customers` is unique
     // on (business_id, phone): without one canonical form, `01711000000` and
