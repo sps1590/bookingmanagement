@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 import { ApiError, ErrorCode } from "@/lib/api/errors";
 import { publicClient } from "@/lib/supabase/public";
@@ -19,6 +20,28 @@ import { publicClient } from "@/lib/supabase/public";
  * place it belongs: a mistake in a filter here would expose every tenant
  * rather than return the wrong page.
  */
+
+/**
+ * How long a portal read may be reused, and the tag that drops it early.
+ *
+ * The expensive part of the booking page is these queries, not the rendering,
+ * and what they return changes a few times a year. Caching the data rather
+ * than the page is deliberate: the page still runs per request, so a slug
+ * that does not exist still reaches `notFound()` and still answers 404. A
+ * cached *page* cannot do that — once Next has begun streaming a response the
+ * status is already sent, and an unknown booking link would answer 200 with a
+ * not-found body. Search engines index that, and the end-to-end suite catches
+ * it, which is how this was found.
+ *
+ * Five minutes is the backstop. The mechanism is the tag: every settings
+ * write that changes what a customer reads calls `revalidateTag`, so edits
+ * are live on the next request rather than within the window.
+ */
+export const CACHE_SECONDS = 300;
+
+export function tenantTag(slug: string) {
+  return `tenant:${slug}`;
+}
 
 export interface PublicService {
   id: string;
@@ -48,17 +71,23 @@ export interface PublicStaff {
  * per tap, which on a round trip of any length is the difference between a
  * grid that appears and a grid that arrives.
  */
-export const loadPublicBusiness = cache(async (slug: string) => {
-  const { data } = await publicClient()
-    .from("public_businesses")
-    .select(
-      "id, slug, name, business_type, phone, address, timezone, currency, terminology_config, branding_config, booking_rules",
-    )
-    .eq("slug", slug)
-    .maybeSingle();
+export const loadPublicBusiness = cache((slug: string) =>
+  unstable_cache(
+    async () => {
+      const { data } = await publicClient()
+        .from("public_businesses")
+        .select(
+          "id, slug, name, business_type, phone, address, timezone, currency, terminology_config, branding_config, booking_rules",
+        )
+        .eq("slug", slug)
+        .maybeSingle();
 
-  return data?.id ? data : null;
-});
+      return data?.id ? data : null;
+    },
+    ["public-business", slug],
+    { tags: [tenantTag(slug)], revalidate: CACHE_SECONDS },
+  )(),
+);
 
 export async function requirePublicBusiness(slug: string) {
   const business = await loadPublicBusiness(slug);
@@ -71,47 +100,53 @@ export async function requirePublicBusiness(slug: string) {
  * once in `generateMetadata`, to put the business's name in the tab, and again
  * in the page itself. Two identical lookups, four round trips, for one render.
  */
-export const loadPublicTenant = cache(async (slug: string) => {
-  const supabase = publicClient();
+export const loadPublicTenant = cache((slug: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = publicClient();
 
-  const { data: business } = await supabase
-    .from("public_businesses")
-    .select(
-      "id, slug, name, business_type, phone, address, timezone, currency, terminology_config, branding_config, booking_rules",
-    )
-    .eq("slug", slug)
-    .maybeSingle();
+      const { data: business } = await supabase
+        .from("public_businesses")
+        .select(
+          "id, slug, name, business_type, phone, address, timezone, currency, terminology_config, branding_config, booking_rules",
+        )
+        .eq("slug", slug)
+        .maybeSingle();
 
-  if (!business?.id) return null;
+      if (!business?.id) return null;
 
-  const [{ data: services }, { data: staff }, { data: branches }] = await Promise.all([
-    supabase
-      .from("public_services")
-      .select(
-        "id, name, category, description, duration_minutes, price, deposit_required, color_hex",
-      )
-      .eq("business_id", business.id)
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("public_staff")
-      .select("id, name, title, avatar_url, branch_id")
-      .eq("business_id", business.id)
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("public_branches")
-      .select("id, name, address, phone, map_url")
-      .eq("business_id", business.id),
-  ]);
+      const [{ data: services }, { data: staff }, { data: branches }] = await Promise.all([
+        supabase
+          .from("public_services")
+          .select(
+            "id, name, category, description, duration_minutes, price, deposit_required, color_hex",
+          )
+          .eq("business_id", business.id)
+          .order("sort_order")
+          .order("name"),
+        supabase
+          .from("public_staff")
+          .select("id, name, title, avatar_url, branch_id")
+          .eq("business_id", business.id)
+          .order("sort_order")
+          .order("name"),
+        supabase
+          .from("public_branches")
+          .select("id, name, address, phone, map_url")
+          .eq("business_id", business.id),
+      ]);
 
-  return {
-    business,
-    services: (services ?? []) as PublicService[],
-    staff: (staff ?? []) as PublicStaff[],
-    branches: branches ?? [],
-  };
-});
+      return {
+        business,
+        services: (services ?? []) as PublicService[],
+        staff: (staff ?? []) as PublicStaff[],
+        branches: branches ?? [],
+      };
+    },
+    ["public-tenant", slug],
+    { tags: [tenantTag(slug)], revalidate: CACHE_SECONDS },
+  )(),
+);
 
 /**
  * The same lookup for route handlers, which want an error rather than a null.

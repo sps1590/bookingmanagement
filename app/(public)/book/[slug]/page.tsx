@@ -8,21 +8,28 @@ import { resolveTerminology } from "@/lib/terminology";
 import { BookingFlow } from "./booking-flow";
 
 /**
- * The portal is cached, and regenerated at most every five minutes.
+ * The page is not cached. Its queries are. The difference matters here.
  *
- * This page is the busiest thing the product serves and the slowest thing it
- * had: a business's name, services, providers and branches were fetched from
- * the database on every single visit, for data that changes a few times a
- * year. Now it is rendered once and served from the edge.
+ * This is the busiest thing the product serves and it was the slowest: a
+ * business's name, services, providers and branches read from the database on
+ * every visit — twice per visit, in fact, since `generateMetadata` and the
+ * component below each called the loader and nothing shared the result. For
+ * data that changes a few times a year. Those reads are now cached by tag in
+ * `lib/public/tenant.ts`, so a visit costs no database traffic at all.
  *
- * Nothing here needs to be live. The one part that does — which times are
- * free — is fetched by the client from `/api/v1/public/:slug/slots`, which is
- * never cached, so a cached shell cannot offer a slot that has gone. The five
- * minutes is a backstop rather than the mechanism: publishing in the wizard
- * and every settings screen that changes what appears below calls
- * `revalidatePath('/book/:slug')`, so edits are live on the next request.
+ * Caching the *page* was tried first and was wrong. Once Next.js starts
+ * streaming a response its status is already sent, so `notFound()` below could
+ * no longer answer 404 — an unknown booking link returned 200 with a
+ * not-found body, which search engines index and which is simply untrue. The
+ * end-to-end suite caught it. Rendering per request and caching the data
+ * underneath keeps both: no queries, and an honest status line. For the same
+ * reason this route has no `loading.tsx`; a loading boundary is a commitment
+ * to stream, and that is the commitment that loses the 404.
+ *
+ * Nothing on this page needs to be live anyway. The part that does — which
+ * times are free — is fetched by the client from `/api/v1/public/:slug/slots`,
+ * which is never cached, so nothing here can offer a slot that has gone.
  */
-export const revalidate = 300;
 
 /**
  * The public booking portal — bare, for now. Phase 3 builds the slot picker

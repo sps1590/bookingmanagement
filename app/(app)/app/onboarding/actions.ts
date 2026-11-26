@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireMember } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
+import { tenantTag } from "@/lib/public/tenant";
 import { createClient } from "@/lib/supabase/server";
 
 import { TIMEZONES } from "./timezones";
@@ -366,6 +367,9 @@ export async function goLive(_prev: ActionState, _form: FormData): Promise<Actio
 
   revalidatePath("/app/onboarding");
   revalidatePath(`/book/${member.slug}`);
+  // Publishing is the first time this slug resolves to anything. If a visitor
+  // reached the link a moment early, a cached "no such page" is sitting there.
+  revalidateTag(tenantTag(member.slug), { expire: 0 });
   redirect("/app?welcome=1");
 }
 
