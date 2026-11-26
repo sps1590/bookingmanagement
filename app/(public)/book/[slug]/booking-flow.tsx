@@ -174,9 +174,17 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
 
   // Which days of the shown month can be booked at all (defect M-13), so the
   // date input does not invite a tap on a holiday.
+  //
+  // Keyed on the month, not the date. This effect used to list `date` as a
+  // dependency, so moving from the 3rd to the 4th re-fetched the availability
+  // of all thirty days — a second round trip behind every tap of the picker,
+  // for an answer that could not have changed. Within a month the result is
+  // identical; crossing into a new one is the only time it is worth asking.
+  const monthKey = date.slice(0, 7);
+
   useEffect(() => {
-    if (!serviceId || !date) return;
-    const [year, month] = date.split("-").map(Number);
+    if (!serviceId || !monthKey) return;
+    const [year, month] = monthKey.split("-").map(Number);
     const params = new URLSearchParams({ serviceId, year: String(year), month: String(month) });
     if (staffId !== ANY) params.set("staffId", staffId);
 
@@ -201,7 +209,7 @@ export function BookingFlow({ slug, services, staff, terminology, timezone, curr
     return () => {
       cancelled = true;
     };
-  }, [slug, serviceId, staffId, date]);
+  }, [slug, serviceId, staffId, monthKey]);
 
   // Availability goes stale while a tab sits open. Refreshing on focus is
   // cheaper than letting someone return after lunch to a grid of slots that

@@ -36,8 +36,12 @@ const eslintConfig = [
     },
   },
   {
-    // The service-role client legitimately constructs its own client.
-    files: ["lib/supabase/admin.ts"],
+    // The two wrappers that legitimately construct their own client: the
+    // service-role one, and the session-less anon one the public booking
+    // portal reads through. Both are the boundary this rule protects rather
+    // than a way around it — which is why the exemption is two filenames and
+    // not a directory.
+    files: ["lib/supabase/admin.ts", "lib/supabase/public.ts"],
     rules: {
       "no-restricted-imports": "off",
     },

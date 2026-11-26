@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -7,8 +8,9 @@ import { CopyLink } from "@/components/app/copy-link";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, PageShell, SectionHeading, Stat } from "@/components/ui/page";
+import { SkeletonList, SkeletonStats } from "@/components/ui/skeleton";
 import { loadDaySheet } from "@/lib/admin/day";
-import { requireMember } from "@/lib/auth/session";
+import { requireMember, type MemberContext } from "@/lib/auth/session";
 import { clientEnv } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -27,9 +29,15 @@ export const dynamic = "force-dynamic";
  * would eventually disagree with the list screen, and one of the two would be
  * lying.
  *
- * The column of underlined links that used to end this page is gone: the
- * console shell navigates now. What is left is the day itself, which is what
- * somebody opening this screen at 8am actually came for.
+ * ## Why the day is behind a Suspense boundary
+ *
+ * This page used to wait for two things before sending a single byte: who is
+ * asking, and then today's appointments. The second is the slower of the two,
+ * and the first is all the page needs to draw its own frame — the business
+ * name, the date, the link to the diary. So the frame streams as soon as the
+ * session is known and the figures fill in underneath. Someone opening the
+ * dashboard at eight in the morning sees their own clinic's name immediately
+ * rather than a white tab for the length of a database round trip.
  *
  * Not yet here, and listed so the gap is visible rather than assumed: the
  * Realtime subscription that makes a new online booking appear unprompted.
@@ -47,18 +55,6 @@ export default async function AppHome({
 
   const t = member.terminology;
   const bookingUrl = `${clientEnv.NEXT_PUBLIC_APP_URL}/book/${member.slug}`;
-  const day = await loadDaySheet(member);
-
-  const money = new Intl.NumberFormat("en", {
-    style: "currency",
-    currency: member.currency || "BDT",
-    maximumFractionDigits: 0,
-  });
-  const clock = new Intl.DateTimeFormat("en-GB", {
-    timeZone: member.timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
   const today = new Intl.DateTimeFormat("en-GB", {
     timeZone: member.timezone,
     weekday: "long",
@@ -98,6 +94,7 @@ export default async function AppHome({
         actions={
           <Link
             href="/app/calendar"
+            prefetch
             className="border-border bg-card hover:border-primary/40 hover:text-primary inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
           >
             <CalendarDays className="size-4" aria-hidden />
@@ -106,6 +103,49 @@ export default async function AppHome({
         }
       />
 
+      <Suspense
+        fallback={
+          <>
+            <div className="mt-8">
+              <SkeletonStats />
+            </div>
+            <div className="mt-10">
+              <SkeletonList rows={4} />
+            </div>
+          </>
+        }
+      >
+        <Today member={member} bookingUrl={bookingUrl} />
+      </Suspense>
+    </PageShell>
+  );
+}
+
+/**
+ * Today's figures, and the rest of today's list.
+ *
+ * Split out so the frame above can be sent while this is still waiting on the
+ * database. It takes `member` rather than looking it up again — the session
+ * lookup is request-scoped now, so a second call would cost nothing, but
+ * passing it keeps the dependency visible.
+ */
+async function Today({ member, bookingUrl }: { member: MemberContext; bookingUrl: string }) {
+  const t = member.terminology;
+  const day = await loadDaySheet(member);
+
+  const money = new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: member.currency || "BDT",
+    maximumFractionDigits: 0,
+  });
+  const clock = new Intl.DateTimeFormat("en-GB", {
+    timeZone: member.timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <>
       <dl className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label={`Today's ${t.bookingPlural.toLowerCase()}`} value={day.total} tone="brand" />
         <Stat
@@ -127,6 +167,7 @@ export default async function AppHome({
           actions={
             <Link
               href="/app/bookings"
+              prefetch
               className="text-primary text-sm font-medium underline-offset-4 hover:underline"
             >
               All {t.bookingPlural.toLowerCase()}
@@ -174,6 +215,6 @@ export default async function AppHome({
           </Card>
         )}
       </section>
-    </PageShell>
+    </>
   );
 }

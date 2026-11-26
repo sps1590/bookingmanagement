@@ -46,6 +46,20 @@ async function requireAdmin() {
   return { member, error: null } as const;
 }
 
+/**
+ * Clear a settings screen and the public booking page together.
+ *
+ * Everything on these screens is also on the portal — the service list, the
+ * prices, who provides what, when the doors are open — and the portal is now
+ * cached rather than rebuilt per visitor. A cache is only acceptable if the
+ * writes that invalidate it all say so, and "all" is easier to keep true
+ * through one function than through eight call sites.
+ */
+function publishedChange(member: { slug: string }, settingsPath: string) {
+  revalidatePath(settingsPath);
+  revalidatePath(`/book/${member.slug}`);
+}
+
 // --- Services --------------------------------------------------------------
 
 const serviceSchema = z.object({
@@ -110,7 +124,7 @@ export async function saveService(_prev: ActionState, formData: FormData): Promi
     };
   }
 
-  revalidatePath("/app/settings/services");
+  publishedChange(member, "/app/settings/services");
   return { ok: input.id ? "Saved." : "Added." };
 }
 
@@ -133,7 +147,7 @@ export async function setServiceActive(
 
   if (writeError) return { error: "That could not be changed." };
 
-  revalidatePath("/app/settings/services");
+  publishedChange(member, "/app/settings/services");
   return { ok: active ? "Offered again." : "No longer offered online." };
 }
 
@@ -182,7 +196,7 @@ export async function saveStaff(_prev: ActionState, formData: FormData): Promise
     return { error: describeWriteError(writeError) };
   }
 
-  revalidatePath("/app/settings/staff");
+  publishedChange(member, "/app/settings/staff");
   return { ok: input.id ? "Saved." : "Added." };
 }
 
@@ -239,7 +253,7 @@ export async function setStaffServices(
     }
   }
 
-  revalidatePath("/app/settings/staff");
+  publishedChange(member, "/app/settings/staff");
   return { ok: "Saved." };
 }
 
@@ -294,7 +308,7 @@ export async function addHours(_prev: ActionState, formData: FormData): Promise<
     return { error: describeWriteError(writeError, "Those hours could not be saved.") };
   }
 
-  revalidatePath("/app/settings/hours");
+  publishedChange(member, "/app/settings/hours");
   return { ok: "Added." };
 }
 
@@ -312,7 +326,7 @@ export async function removeHours(_prev: ActionState, formData: FormData): Promi
     .eq("id", id.data);
   if (writeError) return { error: "That could not be removed." };
 
-  revalidatePath("/app/settings/hours");
+  publishedChange(member, "/app/settings/hours");
   return { ok: "Removed." };
 }
 
@@ -351,7 +365,7 @@ export async function addClosure(_prev: ActionState, formData: FormData): Promis
     return { error: describeWriteError(writeError) };
   }
 
-  revalidatePath("/app/settings/hours");
+  publishedChange(member, "/app/settings/hours");
   return { ok: "Marked closed." };
 }
 
@@ -369,7 +383,7 @@ export async function removeClosure(_prev: ActionState, formData: FormData): Pro
     .eq("id", id.data);
   if (writeError) return { error: "That could not be removed." };
 
-  revalidatePath("/app/settings/hours");
+  publishedChange(member, "/app/settings/hours");
   return { ok: "Removed." };
 }
 

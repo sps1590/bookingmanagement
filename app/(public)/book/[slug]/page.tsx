@@ -8,6 +8,23 @@ import { resolveTerminology } from "@/lib/terminology";
 import { BookingFlow } from "./booking-flow";
 
 /**
+ * The portal is cached, and regenerated at most every five minutes.
+ *
+ * This page is the busiest thing the product serves and the slowest thing it
+ * had: a business's name, services, providers and branches were fetched from
+ * the database on every single visit, for data that changes a few times a
+ * year. Now it is rendered once and served from the edge.
+ *
+ * Nothing here needs to be live. The one part that does — which times are
+ * free — is fetched by the client from `/api/v1/public/:slug/slots`, which is
+ * never cached, so a cached shell cannot offer a slot that has gone. The five
+ * minutes is a backstop rather than the mechanism: publishing in the wizard
+ * and every settings screen that changes what appears below calls
+ * `revalidatePath('/book/:slug')`, so edits are live on the next request.
+ */
+export const revalidate = 300;
+
+/**
  * The public booking portal — bare, for now. Phase 3 builds the slot picker
  * and the booking flow; this page exists so Phase 1 can prove the whole chain
  * works end to end: signup creates a tenant, the wizard publishes it, and the

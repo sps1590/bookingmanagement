@@ -3,8 +3,8 @@ import { z } from "zod";
 import { route, parseQuery } from "@/lib/api/handler";
 import { LIMITS, clientIp, enforceRateLimit } from "@/lib/api/rate-limit";
 import { ok } from "@/lib/api/response";
-import { requirePublicTenant } from "@/lib/public/tenant";
-import { createClient } from "@/lib/supabase/server";
+import { requirePublicBusiness } from "@/lib/public/tenant";
+import { publicClient } from "@/lib/supabase/public";
 
 /**
  * `GET /api/v1/public/:slug/month?serviceId=&year=&month=&staffId=`
@@ -34,10 +34,12 @@ export const GET = route(
     const { slug } = await context.params;
     const query = parseQuery(request, querySchema);
 
-    await enforceRateLimit(`month:ip:${clientIp(request)}`, LIMITS.slotsPerIp);
-
-    const { business } = await requirePublicTenant(slug);
-    const supabase = await createClient();
+    // Together, not in sequence — see the slots route for why.
+    const [, business] = await Promise.all([
+      enforceRateLimit(`month:ip:${clientIp(request)}`, LIMITS.slotsPerIp),
+      requirePublicBusiness(slug),
+    ]);
+    const supabase = publicClient();
 
     const { data, error } = await supabase.rpc("get_month_availability", {
       p_business_id: business.id,

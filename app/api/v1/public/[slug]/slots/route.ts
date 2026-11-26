@@ -3,8 +3,8 @@ import { z } from "zod";
 import { route, parseQuery } from "@/lib/api/handler";
 import { LIMITS, clientIp, enforceRateLimit } from "@/lib/api/rate-limit";
 import { ok } from "@/lib/api/response";
-import { requirePublicTenant } from "@/lib/public/tenant";
-import { createClient } from "@/lib/supabase/server";
+import { requirePublicBusiness } from "@/lib/public/tenant";
+import { publicClient } from "@/lib/supabase/public";
 
 /**
  * `GET /api/v1/public/:slug/slots?serviceId=&date=&staffId=`
@@ -35,10 +35,17 @@ export const GET = route(
     const { slug } = await context.params;
     const query = parseQuery(request, querySchema);
 
-    await enforceRateLimit(`slots:ip:${clientIp(request)}`, LIMITS.slotsPerIp);
-
-    const { business } = await requirePublicTenant(slug);
-    const supabase = await createClient();
+    // The limiter and the tenant lookup are independent, so they go together
+    // rather than one after the other. This route runs on every tap of a date
+    // in the picker, and it used to spend two sequential round trips — one to
+    // a counter table, one to a view — before it began looking for a slot.
+    // A read performed for a caller who turns out to be over the limit is
+    // thrown away; a second of waiting on the common path is not recoverable.
+    const [, business] = await Promise.all([
+      enforceRateLimit(`slots:ip:${clientIp(request)}`, LIMITS.slotsPerIp),
+      requirePublicBusiness(slug),
+    ]);
+    const supabase = publicClient();
 
     if (query.staffId) {
       const { data, error } = await supabase.rpc("get_available_slots", {

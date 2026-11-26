@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -13,8 +14,16 @@ import type { Database } from "./types";
  * Row-Level Security as that user. This is the client almost all server code
  * should use: RLS is the tenant isolation boundary, and bypassing it is how
  * cross-tenant leaks happen.
+ *
+ * One client per request, via `cache()`. A single console page used to build
+ * four or five of these — the layout, the page, the session lookup, each data
+ * loader — and every one re-read the cookie jar and stood up its own auth
+ * client with its own token state. Sharing one is both cheaper and less
+ * surprising: a session refresh written by a Server Action is now visible to
+ * everything else in the same request rather than to whichever client happened
+ * to perform it.
  */
-export async function createClient() {
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -32,10 +41,10 @@ export async function createClient() {
             }
           } catch {
             // Called from a Server Component, where cookies are read-only.
-            // Session refresh is handled by middleware instead.
+            // `middleware.ts` refreshes the session where it can be written.
           }
         },
       },
     },
   );
-}
+});

@@ -1,7 +1,9 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { ApiError, ErrorCode } from "@/lib/api/errors";
-import { createClient } from "@/lib/supabase/server";
+import { publicClient } from "@/lib/supabase/public";
 
 /**
  * Reading a tenant as the public sees it.
@@ -37,8 +39,40 @@ export interface PublicStaff {
   branch_id: string | null;
 }
 
-export async function loadPublicTenant(slug: string) {
-  const supabase = await createClient();
+/**
+ * The business row on its own.
+ *
+ * The slot grid needs an id and a timezone and nothing else, but it used to
+ * call `loadPublicTenant` to get them — and so fetched every service, every
+ * provider and every branch on each tap of a date. Three queries thrown away
+ * per tap, which on a round trip of any length is the difference between a
+ * grid that appears and a grid that arrives.
+ */
+export const loadPublicBusiness = cache(async (slug: string) => {
+  const { data } = await publicClient()
+    .from("public_businesses")
+    .select(
+      "id, slug, name, business_type, phone, address, timezone, currency, terminology_config, branding_config, booking_rules",
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+
+  return data?.id ? data : null;
+});
+
+export async function requirePublicBusiness(slug: string) {
+  const business = await loadPublicBusiness(slug);
+  if (!business) throw new ApiError(ErrorCode.NOT_FOUND, "No such booking page.");
+  return business;
+}
+
+/**
+ * Wrapped in `cache()` because the portal asks for this twice on every visit:
+ * once in `generateMetadata`, to put the business's name in the tab, and again
+ * in the page itself. Two identical lookups, four round trips, for one render.
+ */
+export const loadPublicTenant = cache(async (slug: string) => {
+  const supabase = publicClient();
 
   const { data: business } = await supabase
     .from("public_businesses")
@@ -77,7 +111,7 @@ export async function loadPublicTenant(slug: string) {
     staff: (staff ?? []) as PublicStaff[],
     branches: branches ?? [],
   };
-}
+});
 
 /**
  * The same lookup for route handlers, which want an error rather than a null.
