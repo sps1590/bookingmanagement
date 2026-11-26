@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireMember } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { describeWriteError } from "@/lib/api/write-error";
 
 export interface LeaveState {
   error?: string;
@@ -88,7 +89,7 @@ export async function decideLeave(_prev: LeaveState, formData: FormData): Promis
     .eq("id", parsed.data.id)
     .eq("business_id", member.businessId);
 
-  if (error) return { error: "That could not be saved." };
+  if (error) return { error: describeWriteError(error) };
 
   revalidatePath("/app/settings/leave");
   revalidatePath("/staff/availability");

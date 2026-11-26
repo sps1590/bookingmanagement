@@ -30,14 +30,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * of identity. Documented as D-018 rather than left as a silent omission.
  */
 
-/** Requests per window, by scope. Tuned for a booking form, not an API. */
+/**
+ * Requests per window, by scope. Tuned for a booking form, not an API.
+ *
+ * These are abuse ceilings and nothing else — they exist to stop a script,
+ * not to ration a clinic. The first numbers here (10 bookings an hour per IP)
+ * were a real ceiling on real use: a hospital, a campus or an office shares
+ * one public address, so a busy morning of patients booking from the building
+ * wifi looks like one caller making its eleventh request. The limit is now
+ * far above anything a human crowd produces and still far below what a script
+ * does in a minute.
+ *
+ * Per phone stays comparatively tight on purpose: one number holding a
+ * tenant's whole day is the abuse signal that actually matters, and a real
+ * person booking for their whole family is well under ten.
+ */
 export const LIMITS = {
-  /** A person booking for their family might legitimately do this a few times. */
-  bookingsPerIp: { limit: 10, windowSeconds: 3600 },
+  /** A shared office or hospital connection is one IP and many people. */
+  bookingsPerIp: { limit: 120, windowSeconds: 3600 },
   /** The same number booking repeatedly is the abuse signal that matters. */
-  bookingsPerPhone: { limit: 5, windowSeconds: 3600 },
+  bookingsPerPhone: { limit: 12, windowSeconds: 3600 },
   /** Browsing availability is cheap, but not free — this is a database call. */
-  slotsPerIp: { limit: 240, windowSeconds: 3600 },
+  slotsPerIp: { limit: 1200, windowSeconds: 3600 },
 } as const;
 
 /**

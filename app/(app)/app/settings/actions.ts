@@ -7,6 +7,7 @@ import { requireMember } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { callingCodeForTimezone, tryNormalisePhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { describeWriteError } from "@/lib/api/write-error";
 
 /**
  * Settings: services, providers, and the working week.
@@ -101,7 +102,9 @@ export async function saveService(_prev: ActionState, formData: FormData): Promi
       businessId: member.businessId,
       code: writeError.code,
     });
-    return { error: "That could not be saved. Check the values and try again." };
+    return {
+      error: describeWriteError(writeError, "That could not be saved. Check the values and try again."),
+    };
   }
 
   revalidatePath("/app/settings/services");
@@ -173,7 +176,7 @@ export async function saveStaff(_prev: ActionState, formData: FormData): Promise
 
   if (writeError) {
     logger.warn("settings.staff.failed", { businessId: member.businessId, code: writeError.code });
-    return { error: "That could not be saved." };
+    return { error: describeWriteError(writeError) };
   }
 
   revalidatePath("/app/settings/staff");
@@ -214,7 +217,7 @@ export async function setStaffServices(
     .delete()
     .eq("staff_id", staffId.data);
 
-  if (clearError) return { error: "That could not be saved." };
+  if (clearError) return { error: describeWriteError(clearError) };
 
   if (wanted.length > 0) {
     const { error: writeError } = await supabase.from("staff_services").insert(
@@ -229,7 +232,7 @@ export async function setStaffServices(
         businessId: member.businessId,
         code: writeError.code,
       });
-      return { error: "That could not be saved." };
+      return { error: describeWriteError(writeError) };
     }
   }
 
@@ -285,7 +288,7 @@ export async function addHours(_prev: ActionState, formData: FormData): Promise<
           : "Those hours overlap another block on the same day.",
       };
     }
-    return { error: "Those hours could not be saved." };
+    return { error: describeWriteError(writeError, "Those hours could not be saved.") };
   }
 
   revalidatePath("/app/settings/hours");
@@ -342,7 +345,7 @@ export async function addClosure(_prev: ActionState, formData: FormData): Promis
 
   if (writeError) {
     if (writeError.code === "23505") return { error: "That date is already marked closed." };
-    return { error: "That could not be saved." };
+    return { error: describeWriteError(writeError) };
   }
 
   revalidatePath("/app/settings/hours");

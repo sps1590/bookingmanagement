@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireMember } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import { describeWriteError } from "@/lib/api/write-error";
 
 export interface NotesState {
   error?: string;
@@ -52,7 +53,7 @@ export async function saveCustomerNotes(
       businessId: member.businessId,
       code: error.code,
     });
-    return { error: "That could not be saved." };
+    return { error: describeWriteError(error) };
   }
 
   revalidatePath("/app/customers");

@@ -300,7 +300,10 @@ BEGIN
         RAISE EXCEPTION 'The monthly booking quota was not enforced (got "%")', v_msg;
     END IF;
 
-    UPDATE subscription_plans SET max_monthly_bookings = 2000 WHERE code = 'pro';
+    -- Back to NULL, not to a number: 0029 made every tier uncapped, and a
+    -- test that quietly left a 2,000-booking ceiling behind would hand the
+    -- files after this one a limit that the schema does not have.
+    UPDATE subscription_plans SET max_monthly_bookings = NULL WHERE code = 'pro';
 END
 $$;
 
