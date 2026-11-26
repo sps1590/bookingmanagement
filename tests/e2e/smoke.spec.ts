@@ -91,14 +91,12 @@ test("an unknown booking slug is not indexable, and gives nothing away", async (
   // tenants do not all fall out of search together — needs a published
   // business, so it lives in booking.spec.ts behind E2E_TENANT_SLUG.
 
-  // The status is deliberately not pinned, because it differs by host and
-  // both answers are acceptable. Under `next start`, which is what this suite
-  // and CI run, the prerendered shell commits a 200 before `notFound()` gets
-  // to speak. On Vercel the same build answers 404 — verified against the
-  // live deployment with fresh slugs and a cache MISS — because its runtime
-  // resolves the interrupt before the status goes out. That is a platform
-  // behaviour rather than a documented framework guarantee, so the tag above
-  // is what this test actually protects; asserting 200 here would fail the
-  // day we self-host differently, and asserting 404 would fail today.
+  // The status is deliberately not pinned. It is 200 everywhere this runs
+  // today — under `next start`, and on Vercel, where the shell is identical
+  // for every slug and is served from the CDN as `X-Vercel-Cache: PRERENDER`.
+  // Allowing 404 as well means this test does not become a tripwire if a
+  // future runtime resolves the interrupt before the status goes out, which
+  // would be an improvement rather than a regression. The tag above is what
+  // this test actually protects, and that is asserted strictly.
   expect([200, 404]).toContain(response?.status());
 });
