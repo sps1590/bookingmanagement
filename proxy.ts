@@ -121,7 +121,16 @@ export async function proxy(request: NextRequest) {
   // an email after the fact.
   const resuming = pathname === "/signup" && request.nextUrl.searchParams.get("resume") === "1";
 
-  if (session && !resuming && (pathname === "/login" || pathname === "/signup")) {
+  // And the second exception, which exists because this function now trusts
+  // the cookie's own arithmetic rather than asking the auth server. An access
+  // token can still be inside its hour while the account behind it has been
+  // deleted or suspended, and then `requireMember()` — which does ask — sends
+  // the request back here with nothing to show for it. Redirecting that to
+  // /app would bounce it between the two forever, so `requireMember()` marks
+  // the bounce and this lets the login page through.
+  const expired = request.nextUrl.searchParams.get("expired") === "1";
+
+  if (session && !resuming && !expired && (pathname === "/login" || pathname === "/signup")) {
     const app = request.nextUrl.clone();
     app.pathname = "/app";
     app.search = "";

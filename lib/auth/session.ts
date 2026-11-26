@@ -149,7 +149,15 @@ export async function requireMember(): Promise<MemberContext> {
 
   if (!context) {
     const user = await getAuthUser();
-    redirect(user ? "/signup?resume=1" : "/login");
+    // `?expired=1` is a loop-breaker, not decoration. The proxy decides where
+    // to send people by reading the session cookie locally, and a cookie can
+    // hold an access token that still looks valid to arithmetic while the auth
+    // server no longer honours it — a deleted or suspended account, for up to
+    // an hour. Without the marker: proxy sees a session and sends /login to
+    // /app, this function asks the auth server, gets nobody, and sends it back
+    // to /login. Forever. The marker tells the proxy to let the login page
+    // render so the person can sign in again.
+    redirect(user ? "/signup?resume=1" : "/login?expired=1");
   }
 
   return context;
