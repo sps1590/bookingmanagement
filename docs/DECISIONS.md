@@ -317,3 +317,44 @@ A landmine came with it: `expire_subscriptions` paged past the free plan's allow
 **Tenant rules** — `businesses.booking_rules` — are a different problem. They were never caps on a product tier; they are a business's own policy, and they had defaults from 0003 with no screen to change them. Thirty days of forward booking refuses a six-month check-up; three open bookings per customer refuses half a course of physiotherapy. Migration 0030 raises the defaults and Settings → Booking rules makes them editable, which is the actual fix: the numbers belong to whoever answers the phone, not to a migration.
 
 What is deliberately *not* lifted: `min_lead_minutes` and the cancellation cutoffs, which are notice rather than ceiling and which the front desk can already bypass for someone standing at the counter (0023); and the abuse limits in `lib/api/rate-limit.ts`, which were raised — 10 bookings an hour per IP is one hospital's wifi on a busy morning — but not removed, because the public endpoint is unauthenticated and an unthrottled form is a gift to a script.
+
+---
+
+## D-021 — The function region, and the round trips nobody counted
+
+**Date:** 2026-11-26 (post-launch)
+**Status:** Accepted
+
+The product was slow, and almost none of it was the code's fault in a way the code could see.
+
+The database is in AWS `ap-southeast-1`. The serverless functions were running in `iad1` — Virginia — because that is Vercel's default and no deployment config said otherwise. Every query crossed the Pacific and came back. Measured from Dhaka against the live deployment: **410ms for `/api/v1/health`**, which touches nothing, and **1.5–2.6s for `/api/v1/public/:slug`**, which makes two waves of queries. `vercel.json` now pins functions to `sin1`, the same city as the database. It is five lines and it is the largest single change in this entry.
+
+Region is a deployment decision that lives in the repository for the same reason the security headers do (see `next.config.ts`): a setting that exists only in a hosting dashboard is a setting nobody reviews and that the next deployment of this code will not have.
+
+### Seven round trips before anything was drawn
+
+Against a 250ms round trip, the count is the architecture.
+
+`proxy.ts` called `auth.getUser()` on every request inside its matcher. That matcher covers client-side navigations too — those fetch their payload over the network like any other request — so there was one verification round trip in front of every click in the product. `getMemberContext()` cost three more (verify the user, read the membership, read the business), and it was called once by the console layout and again by the page inside it with nothing deduplicating them.
+
+Now the proxy reads the session cookie locally and calls the auth server only inside a five-minute window before the access token expires; `getMemberContext()` is wrapped in React's `cache()`, so the layout and the page share one lookup, and the membership and business arrive together through the foreign key. Three where there were seven.
+
+**This moved a security argument, so it is written down.** The old comment defended `getUser()` over `getSession()` on the grounds that a cookie is attacker-supplied and this check stands in front of the tenant dashboard. The first half is true; the second was not. Every page calls `requireMember()` and every `/api/v1/admin/*` route calls `requireRole()` — both go through `getMemberContext()`, which verifies against the auth server — and RLS decides every row either of them can read. A forged cookie gets past the redirect in the proxy and then gets nothing. Next's documentation asks for precisely this arrangement: the proxy is a fast path, never the gate. The redirect is a courtesy that saves a signed-out visitor from watching a dashboard fail to load. `/api/*` left the matcher entirely, since those routes authenticate themselves and a redirect to `/login` is the wrong answer to an API call.
+
+### The portal is cached; the slots are not
+
+The booking page read the business, its services, its providers and its branches on every visit — and twice per visit, because `generateMetadata` and the page each called the loader. For data that changes a few times a year. It now renders through a session-less anon client and is cached, cold at 205ms and then 10–20ms with no database traffic.
+
+The session-less client is also the only correct one here. The cookie-bound client meant the portal's output depended on who was looking: an owner browsing their own booking page carried their session into those queries, and RLS answered as that owner — the same URL, different rows, and a cache that could have stored one person's view for everyone.
+
+What stays uncached is availability. Which times are free is fetched by the client from `/api/v1/public/:slug/slots`, which is never cached and never will be: a slot grid that is thirty seconds stale is a customer tapping a time that has gone. So a cached shell cannot offer an appointment that no longer exists. Every settings write that changes what a customer reads calls `revalidatePath` on the portal, through one helper rather than eight call sites — a cache is only acceptable if every write that invalidates it says so, and "every" is easier to keep true in one function.
+
+### Why it felt slower than it was
+
+There was no `loading.tsx` and no `Suspense` anywhere in the console. Next.js had nothing to render between a click and the data, so it kept the previous screen on display — fully interactive, completely unchanged. The honest reading of "nothing happened" is that nothing happened, and people clicked again. Skeletons stand in now, shaped like the content that is coming so the page settles rather than jumps, and the dashboard streams its frame while the day's figures are still in flight. They pay twice over: a dynamic route is only prefetched as far as its nearest loading boundary, so adding one lets the router fetch each screen's shell before the click arrives.
+
+### Not done here
+
+This version of Next ships **Cache Components** (`cacheComponents` + `partialPrefetching`), which makes Partial Prerendering the default: a static shell served immediately with runtime data streamed in, and component state preserved across navigation. It is the framework's own answer to this complaint and it is the right destination.
+
+It is not a flag flip. Data fetching becomes dynamic by default, every route segment config has to be migrated, and every page that reads cookies — which here means every console page, through `requireMember()` — must have that read moved inside a `<Suspense>` boundary or it blocks the prerender. There is a documented per-route opt-out (`instant = false`) so it can be done a screen at a time. That is its own pass, with its own verification, not a corner of this one.
